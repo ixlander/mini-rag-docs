@@ -162,3 +162,58 @@ class _HTMLToSections(HTMLParser):
         if not self.doc_title and self.sections:
             self.doc_title = self.sections[0].title
 
+
+def parse_html(html: str) -> Tuple[str, List[Section]]:
+    parser = _HTMLToSections()
+    parser.feed(html)
+    parser.close()
+
+    if not parser.sections:
+        text = re.sub(r"<[^>]+>", " ", html)
+        text = _normalize_text(text)
+        return "Untitled", [Section(title="Main", text=text)] if text else [Section(title="Main", text="")]
+
+    return parser.doc_title or "Untitled", parser.sections
+
+
+def parse_file(path: Path, root_dir: Path) -> Document:
+    ext = path.suffix.lower()
+    raw = _read_text_file(path)
+
+    if ext in (".md", ".markdown"):
+        title, sections = parse_markdown(raw)
+    elif ext in (".html", ".htm"):
+        title, sections = parse_html(raw)
+    elif ext in (".txt",):
+        text = _normalize_text(raw)
+        title = path.stem
+        sections = [Section(title="Main", text=text)]
+    else:
+        raise ValueError(f"Unsupported file type: {path}")
+
+    doc_id = _make_doc_id(path, root_dir)
+    group = _guess_group(path, root_dir)
+
+    return Document(
+        doc_id=doc_id,
+        source_path=str(path.resolve()),
+        source_group=group,
+        title=title or path.stem,
+        sections=sections,
+        url=None,
+    )
+
+
+def iter_docs(raw_root: str = "data/raw") -> List[Document]:
+    root = Path(raw_root).resolve()
+    if not root.exists():
+        raise FileNotFoundError(f"Raw data dir not found: {root}")
+
+    docs: List[Document] = []
+    for path in root.rglob("*"):
+        if not path.is_file():
+            continue
+        if path.suffix.lower() not in (".md", ".markdown", ".html", ".htm", ".txt"):
+            continue
+        docs.append(parse_file(path, root))
+    return docs
