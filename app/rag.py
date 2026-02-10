@@ -64,7 +64,7 @@ class LocalRAG:
 
     def _rerank(self, query: str, candidates: List[Dict[str, Any]]) -> List[Tuple[float, Dict[str, Any]]]:
         pairs = [(query, c["text"]) for c in candidates]
-        scores = self.reranker.predict(pairs)  # higher is better
+        scores = self.reranker.predict(pairs) 
         scored = list(zip(scores.tolist(), candidates))
         scored.sort(key=lambda x: x[0], reverse=True)
         return scored[: self.cfg.top_final]
@@ -74,7 +74,11 @@ class LocalRAG:
             "model": self.cfg.ollama_model,
             "prompt": prompt,
             "system": SYSTEM_PROMPT,
+            "format": "json",         
             "stream": False,
+            "options": {
+                "temperature": 0.0,  
+            },
         }
         r = requests.post(self.cfg.ollama_url, json=payload, timeout=self.cfg.ollama_timeout_s)
         r.raise_for_status()
@@ -91,21 +95,25 @@ class LocalRAG:
 
         candidates: List[Dict[str, Any]] = []
         best_score = float(scores[0]) if len(scores) else -1.0
+
         for score, vid in zip(scores, vids):
             if vid < 0:
                 continue
+
             chunk_id = self.id_map.get(str(int(vid)))
             if not chunk_id:
                 continue
+
             row = self._chunk_by_id.get(chunk_id)
             if not row:
                 continue
+
             c = dict(row)
             c["retrieval_score"] = float(score)
             candidates.append(c)
 
         if not candidates or best_score < self.cfg.min_retrieval_score:
-            result = {
+            result: Dict[str, Any] = {
                 "answer": "I couldn't find this in the documentation.",
                 "citations": [],
                 "confidence": "low",
@@ -116,6 +124,7 @@ class LocalRAG:
                     "timing_ms": {
                         "embed": int((t_embed - t0) * 1000),
                         "retrieve": int((t_retr - t_embed) * 1000),
+                        "total": int((t_retr - t0) * 1000),
                     },
                 }
             return result
@@ -125,6 +134,17 @@ class LocalRAG:
 
         top_chunks = [c for _, c in reranked[: self.cfg.context_k]]
         context_block = build_context_block(top_chunks)
+
+        context_preview = [
+            {
+                "chunk_id": c["chunk_id"],
+                "title": c.get("title"),
+                "section": c.get("section"),
+                "retrieval_score": c.get("retrieval_score"),
+                "text_preview": (c.get("text") or "")[:220].replace("\n", " "),
+            }
+            for c in top_chunks
+        ]
 
         user_prompt = build_user_prompt(question=question, context_block=context_block)
 
@@ -139,9 +159,29 @@ class LocalRAG:
                 "confidence": "medium",
             }
 
-        if not isinstance(parsed.get("citations"), list):
-            parsed["citations"] = []
-        parsed["citations"] = [c for c in parsed["citations"] if isinstance(c, str)]
+        if not isinstance(parsed, dict):
+            parsed = {
+                "answer": "I couldn't find this in the documentation.",
+                "citations": [],
+                "confidence": "low",
+            }
+
+        if not isinstance(parsed.get("answer"), str) or not parsed["answer"].strip():
+            parsed["answer"] = "I couldn't find this in the documentation."
+
+        if parsed.get("confidence") not in ("low", "medium", "high"):
+            parsed["confidence"] = "medium"
+
+        citations = parsed.get("citations")
+        if not isinstance(citations, list):
+            citations = []
+        citations = [c for c in citations if isinstance(c, str)]
+
+        allowed = {c["chunk_id"] for c in top_chunks}
+        parsed["citations"] = [c for c in citations if c in allowed]
+
+        if not parsed["citations"] and parsed["answer"] != "I couldn't find this in the documentation.":
+            parsed["citations"] = [c["chunk_id"] for c in top_chunks[:2]]
 
         if debug:
             parsed["debug"] = {
@@ -164,6 +204,7 @@ class LocalRAG:
                     }
                     for s, c in reranked
                 ],
+                "context_preview": context_preview,
                 "timing_ms": {
                     "embed": int((t_embed - t0) * 1000),
                     "retrieve": int((t_retr - t_embed) * 1000),
@@ -171,9 +212,11 @@ class LocalRAG:
                     "generate": int((t_gen - t_rerank) * 1000),
                     "total": int((t_gen - t0) * 1000),
                 },
+                "raw_model_output_preview": (raw or "")[:500],
             }
 
         return parsed
+
 
     @staticmethod
     def _safe_parse_json(s: str) -> Optional[Dict[str, Any]]:
