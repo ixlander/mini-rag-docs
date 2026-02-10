@@ -34,6 +34,50 @@ pip install -r requirements.txt
 uvicorn app.main:app --reload
 ```
 
+Docker Setup
+
+Prerequisites for Docker:
+- Docker and Docker Compose installed
+- Ollama running on host machine
+
+Build and run with Docker Compose:
+```bash
+docker-compose up -d
+```
+
+Or build and run manually:
+```bash
+# Build image
+docker build -t mini-rag-docs .
+
+# Run container
+docker run -d \
+  -p 8000:8000 \
+  -v $(pwd)/data/workspaces:/app/data/workspaces \
+  -v $(pwd)/artifacts/workspaces:/app/artifacts/workspaces \
+  -e OLLAMA_URL=http://host.docker.internal:11434/api/generate \
+  --add-host host.docker.internal:host-gateway \
+  mini-rag-docs
+```
+
+Windows (PowerShell):
+```powershell
+docker run -d `
+  -p 8000:8000 `
+  -v ${PWD}/data/workspaces:/app/data/workspaces `
+  -v ${PWD}/artifacts/workspaces:/app/artifacts/workspaces `
+  -e OLLAMA_URL=http://host.docker.internal:11434/api/generate `
+  --add-host host.docker.internal:host-gateway `
+  mini-rag-docs
+```
+
+The API will be available at `http://localhost:8000`
+
+Stop container:
+```bash
+docker-compose down
+```
+
 API Endpoints
 
 - `POST /workspaces` - create a new workspace
