@@ -6,10 +6,12 @@ venv/
 
 # Artifacts / data
 artifacts/
+data/
 data/processed/
 *.parquet
 *.index
 *.npy
+
 
 # OS / IDE
 .DS_Store
