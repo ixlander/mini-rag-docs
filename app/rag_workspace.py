@@ -41,7 +41,10 @@ class WorkspaceRAG:
         index = faiss.read_index(str(art / "faiss.index"))
         df = pd.read_parquet(art / "chunks.parquet")
         id_map = json.loads((art / "id_map.json").read_text(encoding="utf-8"))
-        chunk_by_id: Dict[str, Dict[str, Any]] = {r["chunk_id"]: r for r in df.to_dict(orient="records")}
+        chunk_by_id: Dict[str, Dict[str, Any]] = {
+            str(r["chunk_id"]): {str(k): v for k, v in r.items()}
+            for r in df.to_dict(orient="records")
+        }
         return index, df, id_map, chunk_by_id
 
     def _embed_query(self, query: str) -> np.ndarray:
