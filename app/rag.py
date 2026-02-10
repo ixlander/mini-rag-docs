@@ -1,4 +1,3 @@
-# app/rag.py
 from __future__ import annotations
 
 import json
@@ -18,14 +17,14 @@ from app.prompts import SYSTEM_PROMPT, build_context_block, build_user_prompt
 
 @dataclass(frozen=True)
 class RAGConfig:
-    artifacts_dir: str = "artifacts"    
+    artifacts_dir: str = "artifacts"
     embed_model: str = "intfloat/multilingual-e5-small"
     use_e5_prefix: bool = True
 
     rerank_model: str = "cross-encoder/ms-marco-MiniLM-L-6-v2"
 
-    top_k: int = 8-12
-    top_final: int = 3-4
+    top_k: int = 12
+    top_final: int = 4
     context_k: int = 3
 
     min_retrieval_score: float = 0.25
@@ -33,6 +32,8 @@ class RAGConfig:
     ollama_url: str = "http://localhost:11434/api/generate"
     ollama_model: str = "qwen2.5:3b-instruct"
     ollama_timeout_s: int = 180
+    num_predict: int = 180
+    temperature: float = 0.0
 
 
 class LocalRAG:
@@ -60,26 +61,26 @@ class LocalRAG:
         return emb
 
     def _retrieve(self, query_emb: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
-        D, I = self.index.search(query_emb, self.cfg.top_k)
+        D, I = self.index.search(query_emb, int(self.cfg.top_k))
         return D[0], I[0]
 
     def _rerank(self, query: str, candidates: List[Dict[str, Any]]) -> List[Tuple[float, Dict[str, Any]]]:
         pairs = [(query, c["text"]) for c in candidates]
-        scores = self.reranker.predict(pairs)  # higher is better
+        scores = self.reranker.predict(pairs)
         scored = list(zip(scores.tolist(), candidates))
         scored.sort(key=lambda x: x[0], reverse=True)
-        return scored[: self.cfg.top_final]
+        return scored[: int(self.cfg.top_final)]
 
     def _ollama_generate(self, prompt: str) -> str:
         payload = {
             "model": self.cfg.ollama_model,
             "prompt": prompt,
             "system": SYSTEM_PROMPT,
-            "format": "json",         
+            "format": "json",
             "stream": False,
             "options": {
-                "temperature": 0.0,
-                "num_predict" : 180,
+                "temperature": float(self.cfg.temperature),
+                "num_predict": int(self.cfg.num_predict),
             },
         }
         r = requests.post(self.cfg.ollama_url, json=payload, timeout=self.cfg.ollama_timeout_s)
@@ -99,7 +100,7 @@ class LocalRAG:
         best_score = float(scores[0]) if len(scores) else -1.0
 
         for score, vid in zip(scores, vids):
-            if vid < 0:
+            if int(vid) < 0:
                 continue
 
             chunk_id = self.id_map.get(str(int(vid)))
@@ -134,7 +135,7 @@ class LocalRAG:
         reranked = self._rerank(question, candidates)
         t_rerank = time.time()
 
-        top_chunks = [c for _, c in reranked[: self.cfg.context_k]]
+        top_chunks = [c for _, c in reranked[: int(self.cfg.context_k)]]
         context_block = build_context_block(top_chunks)
 
         context_preview = [
@@ -219,13 +220,12 @@ class LocalRAG:
 
         return parsed
 
-
     @staticmethod
     def _safe_parse_json(s: str) -> Optional[Dict[str, Any]]:
         s = (s or "").strip()
         if not s:
             return None
-        
+
         try:
             obj = json.loads(s)
             if isinstance(obj, dict):
