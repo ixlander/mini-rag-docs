@@ -6,6 +6,10 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import List, Dict, Optional, Tuple
 from html.parser import HTMLParser
+from bs4 import BeautifulSoup
+from docx import Document as DocxDocument
+from pypdf import PdfReader
+
 
 
 @dataclass(frozen=True)
@@ -176,18 +180,98 @@ def parse_html(html: str) -> Tuple[str, List[Section]]:
     return parser.doc_title or "Untitled", parser.sections
 
 
+def extract_text_from_docx(path: Path) -> str:
+    doc = DocxDocument(str(path))
+    parts = []
+    for p in doc.paragraphs:
+        t = (p.text or "").strip()
+        if t:
+            parts.append(t)
+    return _normalize_text("\n".join(parts))
+
+
+def extract_text_from_pdf(path: Path) -> str:
+    reader = PdfReader(str(path))
+    parts = []
+    for page in reader.pages:
+        t = page.extract_text() or ""
+        t = t.strip()
+        if t:
+            parts.append(t)
+    return _normalize_text("\n\n".join(parts))
+
+
+def parse_html(html: str) -> Tuple[str, List[Section]]:
+    soup = BeautifulSoup(html, "lxml")
+
+    for tag in soup(["script", "style", "noscript"]):
+        tag.decompose()
+
+    doc_title = "Untitled"
+    if soup.title and soup.title.string:
+        doc_title = soup.title.string.strip() or doc_title
+
+    sections: List[Section] = []
+    current_title = "Main"
+    buf: List[str] = []
+
+    def flush():
+        nonlocal buf
+        text = _normalize_text("\n".join(buf))
+        if text:
+            sections.append(Section(title=current_title, text=text))
+        buf = []
+
+    for el in soup.find_all(["h1", "h2", "h3", "h4", "h5", "h6", "p", "li"]):
+        name = el.name.lower()
+        txt = (el.get_text(" ", strip=True) or "").strip()
+        if not txt:
+            continue
+        if name.startswith("h"):
+            flush()
+            current_title = txt
+        else:
+            buf.append(txt)
+
+    flush()
+
+    if not sections:
+        text = _normalize_text(soup.get_text(" ", strip=True))
+        return doc_title, [Section(title="Main", text=text)] if text else [Section(title="Main", text="")]
+
+    if not doc_title or doc_title == "Untitled":
+        doc_title = sections[0].title or doc_title
+
+    return doc_title, sections
+
+
 def parse_file(path: Path, root_dir: Path) -> Document:
     ext = path.suffix.lower()
-    raw = _read_text_file(path)
 
     if ext in (".md", ".markdown"):
+        raw = _read_text_file(path)
         title, sections = parse_markdown(raw)
+
     elif ext in (".html", ".htm"):
+        raw = _read_text_file(path)
         title, sections = parse_html(raw)
-    elif ext in (".txt",):
+
+    elif ext == ".txt":
+        raw = _read_text_file(path)
         text = _normalize_text(raw)
         title = path.stem
         sections = [Section(title="Main", text=text)]
+
+    elif ext == ".docx":
+        text = extract_text_from_docx(path)
+        title = path.stem
+        sections = [Section(title="Main", text=text)]
+
+    elif ext == ".pdf":
+        text = extract_text_from_pdf(path)
+        title = path.stem
+        sections = [Section(title="Main", text=text)]
+
     else:
         raise ValueError(f"Unsupported file type: {path}")
 
@@ -203,7 +287,6 @@ def parse_file(path: Path, root_dir: Path) -> Document:
         url=None,
     )
 
-
 def iter_docs(raw_root: str = "data/raw") -> List[Document]:
     root = Path(raw_root).resolve()
     if not root.exists():
@@ -213,7 +296,8 @@ def iter_docs(raw_root: str = "data/raw") -> List[Document]:
     for path in root.rglob("*"):
         if not path.is_file():
             continue
-        if path.suffix.lower() not in (".md", ".markdown", ".html", ".htm", ".txt"):
+        if path.suffix.lower() not in (".md", ".markdown", ".html", ".htm", ".txt", ".docx", ".pdf"):
             continue
         docs.append(parse_file(path, root))
     return docs
+
