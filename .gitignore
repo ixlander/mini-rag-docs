@@ -6,7 +6,8 @@ venv/
 
 # Artifacts / data
 artifacts/
-data/
+data/raw/
+data/workspaces/
 data/processed/
 *.parquet
 *.index
