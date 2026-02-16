@@ -29,3 +29,10 @@ data/processed/
 results*.json
 
 minirag.db
+minirag.db-shm
+minirag.db-wal
+
+# Temp files
+*.json.tmp
+reg.json
+ws.json
