@@ -1,6 +1,10 @@
-# Mini-RAG Docs (Workspaces)
+# Mini-RAG Docs
 
-A FastAPI service for creating per-workspace document indexes and answering questions using a local LLM (Ollama) with embeddings.
+![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue)
+![Tests](https://img.shields.io/badge/tests-67%20passed-green)
+![License: MIT](https://img.shields.io/badge/license-MIT-yellow)
+
+A local-first RAG system that indexes documents per workspace and answers questions with citations — evaluated across 2 domains with 54 ground-truth questions.
 
 ## Architecture
 
@@ -54,37 +58,55 @@ A FastAPI service for creating per-workspace document indexes and answering ques
 | Evaluation | Faithfulness, Answer Relevance (embedding), LLM-as-Judge |
 | Testing | pytest (67 unit tests) |
 
-Prerequisites
-
-Python 3.10+
-
-Ollama installed and running locally. Start Ollama:
-```bash
-ollama serve
-```
-
-Pull a compatible model:
-```bash
-ollama pull qwen2.5:3b-instruct
-```
-
 ## Setup
 
-### Windows
-```powershell
+### Prerequisites
+
+- Python 3.10+
+- Ollama installed and running (`ollama serve`)
+- A compatible model pulled: `ollama pull qwen2.5:3b-instruct`
+
+### Install & Run
+
+```bash
 python -m venv .venv
-.\.venv\Scripts\activate
+source .venv/bin/activate      # Windows: .\.venv\Scripts\activate
 pip install -r requirements.txt
 uvicorn app.main:app --reload
 ```
 
-Linux/macOS
+## Quick Start
+
 ```bash
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-uvicorn app.main:app --reload
+# 1. Create workspace
+curl -X POST http://127.0.0.1:8000/workspaces
+# → {"workspace_id":"WRPgUdZzpPAoPyYv"}
+
+# 2. Upload files
+curl -X POST http://127.0.0.1:8000/upload/WRPgUdZzpPAoPyYv -F "files=@document.pdf"
+
+# 3. Build index
+curl -X POST http://127.0.0.1:8000/build_index/WRPgUdZzpPAoPyYv
+
+# 4. Query
+curl -X POST http://127.0.0.1:8000/query \
+  -H "Content-Type: application/json" \
+  -d '{"workspace_id":"WRPgUdZzpPAoPyYv","question":"What is this document about?"}'
 ```
+
+<details>
+<summary>Windows PowerShell syntax</summary>
+
+```powershell
+# Upload
+curl.exe -X POST http://127.0.0.1:8000/upload/WRPgUdZzpPAoPyYv -F "files=@document.pdf"
+
+# Query (write JSON to file to avoid escaping issues)
+@'{"workspace_id":"WRPgUdZzpPAoPyYv","question":"What is this document about?"}'
+'@ | Set-Content query.json
+curl.exe -X POST http://127.0.0.1:8000/query -H "Content-Type: application/json" --data-binary "@query.json"
+```
+</details>
 
 ### GPU Acceleration (Optional)
 
@@ -176,52 +198,6 @@ python -m pytest tests/ -v
 - `POST /build_index/{workspace_id}` - build the FAISS index for the workspace
 - `POST /query` - ask a question about uploaded documents
 
-## Complete Workflow Example
-
-1. Create workspace
-```bash
-curl.exe -X POST http://127.0.0.1:8000/workspaces
-```
-Response: `{"workspace_id":"WRPgUdZzpPAoPyYv"}`
-
-2. Upload files
-```bash
-curl.exe -X POST http://127.0.0.1:8000/upload/WRPgUdZzpPAoPyYv -F "files=@document.pdf"
-```
-
-Or upload an entire directory:
-```bash
-curl.exe -X POST http://127.0.0.1:8000/upload_dir/WRPgUdZzpPAoPyYv -H "Content-Type: application/json" -d "{\"directory\": \"C:\\Users\\Admin\\Desktop\\company_policies\"}"
-```
-
-3. Check status
-```bash
-curl.exe http://127.0.0.1:8000/status/WRPgUdZzpPAoPyYv
-```
-
-4. Build index
-```bash
-curl.exe -X POST http://127.0.0.1:8000/build_index/WRPgUdZzpPAoPyYv
-```
-
-5. Query (Linux/macOS)
-```bash
-curl -X POST http://127.0.0.1:8000/query \
-  -H "Content-Type: application/json" \
-  -d '{"workspace_id":"WRPgUdZzpPAoPyYv","question":"What is this document about?","debug":false}'
-```
-
-6. Query (Windows PowerShell)
-```powershell
-# Create query.json
-@'
-{"workspace_id":"WRPgUdZzpPAoPyYv","question":"What is this document about?","debug":false}
-'@ | Set-Content query.json
-
-# Send request
-curl.exe -X POST http://127.0.0.1:8000/query -H "Content-Type: application/json" --data-binary "@query.json"
-```
-
 ## Configuration
 
 | Variable | Default | Description |
@@ -268,90 +244,7 @@ mini-rag-docs/
 
 ## Evaluation
 
-The system includes built-in evaluation metrics to measure RAG performance:
-
-### Answer Quality Metrics (Embedding-Based)
-- **Faithfulness** — cosine similarity between the answer and retrieved context embeddings; measures if the answer is grounded in what was retrieved
-- **Answer Relevance** — weighted cosine similarity between the answer, the question, and the ground truth answer (40% question similarity + 60% ground truth similarity)
-
-### LLM-as-Judge Metrics (optional)
-When `--judge` is passed, each answer is scored by a second LLM call on a 1-5 integer scale:
-- **Faithfulness** — is the answer supported by the retrieved context?
-- **Relevance** — does the answer address the question?
-- **Completeness** — does the answer cover the key points of the ground-truth?
-
-The judge prompt enforces structured JSON output and uses temperature 0 for reproducibility. You can specify a different (larger) model for judging with `--judge-model`.
-
-### Running Evaluation
-
-1. Prepare an evaluation dataset (JSON format):
-```json
-[
-  {
-    "question": "What is RAG?",
-    "ground_truth_answer": "RAG is Retrieval-Augmented Generation...",
-    "workspace_id": "your_workspace_id",
-    "metadata": {"category": "definition"}
-  }
-]
-```
-
-2. Run the evaluation script:
-```bash
-python examples/run_evaluation.py \
-  --dataset examples/evaluation_dataset_example.json \
-  --output results.json \
-  --k 5 \
-  --verbose
-```
-
-With LLM-as-judge scoring:
-```bash
-python examples/run_evaluation.py \
-  --dataset examples/evaluation_dataset_bcc.json \
-  --output results.json \
-  --k 5 \
-  --judge \
-  --judge-model qwen2.5:3b-instruct \
-  --verbose
-```
-
-3. View results:
-```bash
-cat results.json
-```
-
-The results include both aggregated metrics and detailed per-question results.
-
-### Using Evaluation in Code
-
-```python
-from app.evaluation import (
-    load_evaluation_dataset,
-    evaluate_rag_system,
-    save_evaluation_results
-)
-
-# Load dataset
-items = load_evaluation_dataset("eval_data.json")
-
-# Create RAG function wrapper
-def rag_fn(workspace_id, question):
-    # Your RAG logic here
-    return {
-        'answer': '...',
-        'citations': [...],
-        'retrieved_chunks': [...]
-    }
-
-# Run evaluation
-results = evaluate_rag_system(items, rag_fn, k=5)
-
-# Save results
-save_evaluation_results(results, "results.json")
-```
-
-### Experiment: Bank CenterCredit Public Policies
+### Experiment 1: Bank CenterCredit Public Policies
 
 We tested this RAG system on a dataset of 24 questions based on publicly available Bank CenterCredit (BCC) policy documents, including sustainability reports, climate strategy, information security policy, E&S risk management policy, and consolidated financial statements.
 
@@ -403,6 +296,48 @@ To validate cross-domain generalization, we evaluated the same pipeline on a com
 
 The privacy policy corpus scored higher across all metrics, likely due to the structured and repetitive nature of privacy policy documents (standard GDPR/CCPA sections) compared to the more varied BCC financial/ESG reports.
 
+### Metrics
+
+**Embedding-based (automatic):**
+- **Faithfulness** — cosine similarity between the answer and retrieved context; measures grounding
+- **Answer Relevance** — weighted similarity between the answer, question, and ground truth (40/60 split)
+
+**LLM-as-judge (optional, `--judge` flag):**
+- **Faithfulness / Relevance / Completeness** — each scored 1–5 by a second LLM call with structured JSON output and temperature 0
+
+<details>
+<summary>Running your own evaluation</summary>
+
+```bash
+python examples/run_evaluation.py \
+  --dataset examples/evaluation_dataset_bcc.json \
+  --output results.json \
+  --k 5 \
+  --judge \
+  --judge-model qwen2.5:3b-instruct \
+  --verbose
+```
+
+Dataset format:
+```json
+[
+  {
+    "question": "What is RAG?",
+    "ground_truth_answer": "RAG is Retrieval-Augmented Generation...",
+    "workspace_id": "your_workspace_id",
+    "metadata": {"category": "definition"}
+  }
+]
+```
+</details>
+
+## Limitations
+
+- **Small LLM** — the 3B-parameter model limits completeness scores; a larger model (7B+) would likely improve judge metrics
+- **No authentication** — workspaces are not access-controlled; intended for local/internal use
+- **No persistent database** — FAISS indexes live on disk; no metadata DB for search filtering
+- **Single-query context** — no conversation memory across queries
+
 ## Troubleshooting
 
 **Ollama not responding:** Ensure Ollama is running with `ollama serve`
@@ -415,3 +350,7 @@ The privacy policy corpus scored higher across all metrics, likely due to the st
 ```bash
 python -c "import torch; print(torch.cuda.is_available())"
 ```
+
+## License
+
+MIT
