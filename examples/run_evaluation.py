@@ -9,6 +9,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from app.evaluation import (
+    LLMJudge,
     load_evaluation_dataset,
     evaluate_rag_system,
     save_evaluation_results,
@@ -83,6 +84,23 @@ def main():
         action="store_true",
         help="Print detailed progress during evaluation"
     )
+    parser.add_argument(
+        "--judge",
+        action="store_true",
+        help="Enable LLM-as-judge scoring (slower, requires Ollama)"
+    )
+    parser.add_argument(
+        "--judge-model",
+        type=str,
+        default=None,
+        help="Ollama model for LLM judge (default: same as OLLAMA_MODEL env var)"
+    )
+    parser.add_argument(
+        "--ollama-url",
+        type=str,
+        default=None,
+        help="Ollama base URL (default: OLLAMA_URL env var or http://localhost:11434)"
+    )
     
     args = parser.parse_args()
     
@@ -106,13 +124,22 @@ def main():
         logger.error(f"Error initializing RAG system: {e}")
         return 1
     
+    judge = None
+    if args.judge:
+        import os
+        judge_model = args.judge_model or os.getenv("OLLAMA_MODEL", "qwen2.5:3b-instruct")
+        ollama_url = args.ollama_url or os.getenv("OLLAMA_URL", "http://localhost:11434")
+        logger.info(f"LLM judge enabled: model={judge_model}, url={ollama_url}")
+        judge = LLMJudge(ollama_url=ollama_url, model=judge_model)
+
     logger.info(f"Running evaluation on {len(evaluation_items)} items...")
     try:
         results = evaluate_rag_system(
             evaluation_items=evaluation_items,
             rag_function=rag_function,
             k=args.k,
-            verbose=args.verbose
+            verbose=args.verbose,
+            judge=judge
         )
     except Exception as e:
         logger.error(f"Error during evaluation: {e}")
@@ -128,10 +155,18 @@ def main():
     logger.info(f"  NDCG@{args.k}: {results.retrieval.ndcg_at_k:.4f}")
     logger.info(f"  Samples: {results.retrieval.num_samples}")
     
-    logger.info("\nAnswer Quality Metrics:")
+    logger.info("\nAnswer Quality Metrics (Embedding):")
     logger.info(f"  Faithfulness: {results.answer.faithfulness:.4f}")
     logger.info(f"  Answer Relevance: {results.answer.answer_relevance:.4f}")
     logger.info(f"  Samples: {results.answer.num_samples}")
+
+    if results.judge is not None:
+        logger.info("\nLLM-as-Judge Metrics (1-5 scale):")
+        logger.info(f"  Faithfulness: {results.judge.faithfulness:.2f}")
+        logger.info(f"  Relevance: {results.judge.relevance:.2f}")
+        logger.info(f"  Completeness: {results.judge.completeness:.2f}")
+        logger.info(f"  Samples: {results.judge.num_samples}")
+
     logger.info("="*60 + "\n")
     
     logger.info(f"Saving detailed results to {args.output}")

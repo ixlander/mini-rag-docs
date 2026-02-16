@@ -51,7 +51,7 @@ A FastAPI service for creating per-workspace document indexes and answering ques
 | Vector Store | FAISS (IndexFlatIP, cosine similarity) |
 | LLM | Ollama (default: `qwen2.5:3b-instruct`) |
 | Document Parsing | BeautifulSoup4, pypdf, python-docx |
-| Evaluation | Precision, Recall, MRR, NDCG, Faithfulness, Answer Relevance |
+| Evaluation | Precision, Recall, MRR, NDCG, Faithfulness, Answer Relevance, LLM-as-Judge |
 | Testing | pytest (79 unit tests) |
 
 Prerequisites
@@ -261,6 +261,14 @@ The system includes built-in evaluation metrics to measure RAG performance:
 - **Faithfulness** — cosine similarity between the answer and retrieved context embeddings; measures if the answer is grounded in what was retrieved
 - **Answer Relevance** — weighted cosine similarity between the answer, the question, and the ground truth answer (40% question similarity + 60% ground truth similarity)
 
+### LLM-as-Judge Metrics (optional)
+When `--judge` is passed, each answer is scored by a second LLM call on a 1-5 integer scale:
+- **Faithfulness** — is the answer supported by the retrieved context?
+- **Relevance** — does the answer address the question?
+- **Completeness** — does the answer cover the key points of the ground-truth?
+
+The judge prompt enforces structured JSON output and uses temperature 0 for reproducibility. You can specify a different (larger) model for judging with `--judge-model`.
+
 ### Running Evaluation
 
 1. Prepare an evaluation dataset (JSON format):
@@ -282,6 +290,17 @@ python examples/run_evaluation.py \
   --dataset examples/evaluation_dataset_example.json \
   --output results.json \
   --k 5 \
+  --verbose
+```
+
+With LLM-as-judge scoring:
+```bash
+python examples/run_evaluation.py \
+  --dataset examples/evaluation_dataset_bcc.json \
+  --output results.json \
+  --k 5 \
+  --judge \
+  --judge-model qwen2.5:3b-instruct \
   --verbose
 ```
 

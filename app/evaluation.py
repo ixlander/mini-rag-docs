@@ -3,11 +3,12 @@ from __future__ import annotations
 import json
 import logging
 import os
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set
 
 import numpy as np
+import requests
 import torch
 from sentence_transformers import SentenceTransformer
 
@@ -58,10 +59,90 @@ class AnswerMetrics:
 
 
 @dataclass
+class JudgeMetrics:
+    faithfulness: float
+    relevance: float
+    completeness: float
+    num_samples: int
+
+
+@dataclass
 class EvaluationResults:
     retrieval: RetrievalMetrics
     answer: AnswerMetrics
     detailed_results: List[Dict[str, Any]]
+    judge: Optional[JudgeMetrics] = None
+
+
+JUDGE_SYSTEM_PROMPT = (
+    "You are an impartial evaluation judge. You will be given a question, "
+    "the ground-truth answer, the system's generated answer, and the retrieved context. "
+    "Score the generated answer on three criteria using a 1-5 integer scale.\n\n"
+    "Criteria:\n"
+    "1. faithfulness – Is the generated answer factually supported by the retrieved context? "
+    "(1 = contradicts context, 5 = fully supported)\n"
+    "2. relevance – Does the generated answer address the question? "
+    "(1 = off-topic, 5 = directly answers)\n"
+    "3. completeness – Does the generated answer cover the key points of the ground-truth answer? "
+    "(1 = misses everything, 5 = covers all key points)\n\n"
+    "Respond ONLY with a JSON object: {\"faithfulness\": <int>, \"relevance\": <int>, \"completeness\": <int>}"
+)
+
+JUDGE_USER_TEMPLATE = (
+    "Question:\n{question}\n\n"
+    "Ground-truth answer:\n{ground_truth}\n\n"
+    "Generated answer:\n{generated_answer}\n\n"
+    "Retrieved context:\n{context}"
+)
+
+
+class LLMJudge:
+    def __init__(
+        self,
+        ollama_url: str = "http://localhost:11434",
+        model: str = "qwen2.5:3b-instruct",
+        timeout: int = 180,
+    ):
+        self.url = f"{ollama_url}/api/generate"
+        self.model = model
+        self.timeout = timeout
+
+    def score(
+        self,
+        question: str,
+        ground_truth: str,
+        generated_answer: str,
+        context: str,
+    ) -> Optional[Dict[str, int]]:
+        prompt = JUDGE_USER_TEMPLATE.format(
+            question=question,
+            ground_truth=ground_truth,
+            generated_answer=generated_answer,
+            context=context[:4000],
+        )
+        payload = {
+            "model": self.model,
+            "prompt": prompt,
+            "system": JUDGE_SYSTEM_PROMPT,
+            "format": "json",
+            "stream": False,
+            "options": {"temperature": 0.0, "num_predict": 100},
+        }
+        try:
+            r = requests.post(self.url, json=payload, timeout=self.timeout)
+            r.raise_for_status()
+            raw = r.json().get("response", "")
+            scores = json.loads(raw)
+            result = {
+                "faithfulness": int(np.clip(scores.get("faithfulness", 1), 1, 5)),
+                "relevance": int(np.clip(scores.get("relevance", 1), 1, 5)),
+                "completeness": int(np.clip(scores.get("completeness", 1), 1, 5)),
+            }
+            logger.debug("Judge scores: %s", result)
+            return result
+        except Exception as e:
+            logger.warning("LLM judge failed: %s", e)
+            return None
 
 
 def load_evaluation_dataset(filepath: str) -> List[EvaluationItem]:
@@ -194,7 +275,8 @@ def evaluate_rag_system(
     evaluation_items: List[EvaluationItem],
     rag_function: callable,
     k: int = 5,
-    verbose: bool = False
+    verbose: bool = False,
+    judge: Optional[LLMJudge] = None
 ) -> EvaluationResults:
     retrieval_metrics_list = []
     answer_metrics_list = []
@@ -229,6 +311,15 @@ def evaluate_rag_system(
             )
             answer_metrics_list.append(answer_result)
             
+            judge_result = None
+            if judge is not None:
+                judge_result = judge.score(
+                    question=item.question,
+                    ground_truth=item.ground_truth_answer,
+                    generated_answer=answer,
+                    context="\n\n".join(retrieved_texts)
+                )
+
             detailed_results.append({
                 'question': item.question,
                 'ground_truth_answer': item.ground_truth_answer,
@@ -238,6 +329,7 @@ def evaluate_rag_system(
                 'citations': citations,
                 'retrieval_metrics': retrieval_result,
                 'answer_metrics': answer_result,
+                'judge_metrics': judge_result,
                 'metadata': item.metadata
             })
             
@@ -269,10 +361,22 @@ def evaluate_rag_system(
     else:
         avg_answer = AnswerMetrics(0.0, 0.0, 0)
     
+    avg_judge = None
+    if judge is not None:
+        judge_results = [r.get('judge_metrics') for r in detailed_results if r.get('judge_metrics')]
+        if judge_results:
+            avg_judge = JudgeMetrics(
+                faithfulness=np.mean([j['faithfulness'] for j in judge_results]),
+                relevance=np.mean([j['relevance'] for j in judge_results]),
+                completeness=np.mean([j['completeness'] for j in judge_results]),
+                num_samples=len(judge_results)
+            )
+
     return EvaluationResults(
         retrieval=avg_retrieval,
         answer=avg_answer,
-        detailed_results=detailed_results
+        detailed_results=detailed_results,
+        judge=avg_judge
     )
 
 
@@ -292,6 +396,14 @@ def save_evaluation_results(results: EvaluationResults, output_path: str) -> Non
         },
         'detailed_results': results.detailed_results
     }
+
+    if results.judge is not None:
+        output['judge_metrics'] = {
+            'faithfulness': float(results.judge.faithfulness),
+            'relevance': float(results.judge.relevance),
+            'completeness': float(results.judge.completeness),
+            'num_samples': results.judge.num_samples
+        }
     
     Path(output_path).write_text(
         json.dumps(output, ensure_ascii=False, indent=2),

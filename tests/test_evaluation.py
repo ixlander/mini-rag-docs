@@ -8,6 +8,8 @@ import pytest
 
 from app.evaluation import (
     EvaluationItem,
+    JudgeMetrics,
+    LLMJudge,
     calculate_precision_at_k,
     calculate_recall_at_k,
     calculate_mrr,
@@ -303,3 +305,56 @@ class TestEvaluationItem:
         assert item.question == "Test question"
         assert len(item.relevant_chunk_ids) == 2
         assert item.workspace_id is None
+
+
+class TestJudgeMetrics:
+    def test_create_judge_metrics(self):
+        jm = JudgeMetrics(faithfulness=4.0, relevance=5.0, completeness=3.5, num_samples=10)
+        assert jm.faithfulness == 4.0
+        assert jm.relevance == 5.0
+        assert jm.completeness == 3.5
+        assert jm.num_samples == 10
+
+    def test_evaluation_results_without_judge(self):
+        results = EvaluationResults(
+            retrieval=RetrievalMetrics(0.8, 0.9, 0.85, 0.88, 10),
+            answer=AnswerMetrics(0.75, 0.80, 10),
+            detailed_results=[]
+        )
+        assert results.judge is None
+
+    def test_evaluation_results_with_judge(self):
+        results = EvaluationResults(
+            retrieval=RetrievalMetrics(0.8, 0.9, 0.85, 0.88, 10),
+            answer=AnswerMetrics(0.75, 0.80, 10),
+            detailed_results=[],
+            judge=JudgeMetrics(4.2, 4.5, 3.8, 10)
+        )
+        assert results.judge is not None
+        assert results.judge.faithfulness == 4.2
+
+    def test_save_results_with_judge(self):
+        results = EvaluationResults(
+            retrieval=RetrievalMetrics(0.8, 0.9, 0.85, 0.88, 10),
+            answer=AnswerMetrics(0.75, 0.80, 10),
+            detailed_results=[],
+            judge=JudgeMetrics(4.0, 4.5, 3.5, 10)
+        )
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
+            filepath = f.name
+        try:
+            save_evaluation_results(results, filepath)
+            with open(filepath, 'r') as f:
+                loaded = json.load(f)
+            assert 'judge_metrics' in loaded
+            assert loaded['judge_metrics']['faithfulness'] == 4.0
+            assert loaded['judge_metrics']['relevance'] == 4.5
+            assert loaded['judge_metrics']['completeness'] == 3.5
+        finally:
+            Path(filepath).unlink()
+
+    def test_llm_judge_init(self):
+        judge = LLMJudge(ollama_url="http://example.com", model="test-model", timeout=60)
+        assert judge.model == "test-model"
+        assert judge.timeout == 60
+        assert "example.com" in judge.url
