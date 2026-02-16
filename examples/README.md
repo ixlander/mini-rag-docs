@@ -6,6 +6,7 @@ This directory contains examples for evaluating the RAG system.
 
 - **run_evaluation.py** — Main evaluation script
 - **evaluation_dataset_example.json** — Sample evaluation dataset
+- **evaluation_dataset_bcc.json** — Real evaluation dataset (24 questions, BCC bank documents)
 
 ## Quick Start
 
@@ -51,6 +52,18 @@ python examples/run_evaluation.py \
   --verbose
 ```
 
+With LLM-as-judge scoring (requires Ollama):
+
+```bash
+python examples/run_evaluation.py \
+  --dataset your_dataset.json \
+  --output results.json \
+  --k 5 \
+  --judge \
+  --judge-model qwen2.5:3b-instruct \
+  --verbose
+```
+
 ### 4. View Results
 
 The script will print a summary and save detailed results to JSON:
@@ -60,18 +73,26 @@ EVALUATION RESULTS
 ============================================================
 
 Retrieval Metrics:
-  Precision@5: 0.7500
-  Recall@5: 0.8500
-  MRR: 0.9200
-  NDCG@5: 0.8100
+  Precision@5: 0.0000
+  Recall@5: 0.0000
+  MRR: 0.0000
+  NDCG@5: 0.0000
   Samples: 10
 
-Answer Quality Metrics:
-  Faithfulness: 0.7200
-  Answer Relevance: 0.6800
+Answer Quality Metrics (Embedding):
+  Faithfulness: 0.8340
+  Answer Relevance: 0.9000
+  Samples: 10
+
+LLM-as-Judge Metrics (1-5 scale):
+  Faithfulness: 4.20
+  Relevance: 4.50
+  Completeness: 3.80
   Samples: 10
 ============================================================
 ```
+
+Note: Retrieval metrics require human-annotated `relevant_chunk_ids` to be meaningful. Without them, they will be 0. The LLM-as-judge metrics provide a more credible answer quality evaluation.
 
 ## Metrics Explained
 
@@ -93,19 +114,27 @@ Answer Quality Metrics:
   - Higher is better (0.0 to 1.0)
   - Penalizes relevant chunks that appear lower in results
 
-### Answer Quality Metrics
+### Answer Quality Metrics (Embedding-Based)
 
-- **Faithfulness**: Is the answer grounded in the retrieved context?
+- **Faithfulness**: Cosine similarity between answer and retrieved context embeddings
   - Higher is better (0.0 to 1.0)
-  - Measures if the answer uses information from retrieved documents
+  - Measures if the answer is grounded in what was retrieved
 
-- **Answer Relevance**: Is the answer relevant to the question?
+- **Answer Relevance**: Weighted cosine similarity between answer, question, and ground truth
   - Higher is better (0.0 to 1.0)
-  - Measures if the answer addresses what was asked
+  - 40% question similarity + 60% ground truth similarity
+
+### LLM-as-Judge Metrics (optional, `--judge` flag)
+
+A second LLM call scores each answer on a 1-5 integer scale:
+
+- **Faithfulness**: Is the answer supported by the retrieved context?
+- **Relevance**: Does the answer address the question?
+- **Completeness**: Does the answer cover the key points of the ground truth?
 
 ## Notes
 
 - The evaluation script requires that the workspace index is already built
-- Chunk IDs in the evaluation dataset should match those in your FAISS index
-- The example dataset is for demonstration purposes only
+- Retrieval metrics (Precision, Recall, MRR, NDCG) require human-annotated `relevant_chunk_ids` in the dataset
+- The LLM judge requires a running Ollama instance
 - For production evaluation, create a comprehensive dataset covering various question types and difficulty levels
