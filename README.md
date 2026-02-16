@@ -1,4 +1,4 @@
-Mini-RAG Docs (Workspaces)
+# Mini-RAG Docs (Workspaces)
 
 A FastAPI service for creating per-workspace document indexes and answering questions using a local LLM (Ollama) with embeddings.
 
@@ -68,9 +68,9 @@ Pull a compatible model:
 ollama pull qwen2.5:3b-instruct
 ```
 
-Setup
+## Setup
 
-Windows
+### Windows
 ```powershell
 python -m venv .venv
 .\.venv\Scripts\activate
@@ -86,7 +86,7 @@ pip install -r requirements.txt
 uvicorn app.main:app --reload
 ```
 
-GPU Acceleration (Optional)
+### GPU Acceleration (Optional)
 
 The project auto-detects CUDA at runtime. If a GPU is available, embedding and reranking models run on it automatically, significantly speeding up index building and queries.
 
@@ -98,9 +98,9 @@ pip install torch torchvision torchaudio --index-url https://download.pytorch.or
 
 Replace `cu121` with your CUDA version if different (e.g. `cu124`, `cu128`). Check your CUDA driver version with `nvidia-smi`.
 
-Docker Setup
+## Docker Setup
 
-Prerequisites for Docker:
+### Prerequisites for Docker:
 - Docker and Docker Compose installed
 - Ollama running on host machine
 
@@ -124,7 +124,7 @@ docker run -d \
   mini-rag-docs
 ```
 
-Windows (PowerShell):
+### Windows (PowerShell):
 ```powershell
 docker run -d `
   -p 8000:8000 `
@@ -150,7 +150,7 @@ pip install pytest
 python -m pytest tests/ -v
 ```
 
-API Endpoints
+## API Endpoints
 
 - `POST /workspaces` - create a new workspace
 - `GET /status/{workspace_id}` - check workspace status and index availability
@@ -159,7 +159,7 @@ API Endpoints
 - `POST /build_index/{workspace_id}` - build the FAISS index for the workspace
 - `POST /query` - ask a question about uploaded documents
 
-Complete Workflow Example
+## Complete Workflow Example
 
 1. Create workspace
 ```bash
@@ -205,9 +205,7 @@ curl -X POST http://127.0.0.1:8000/query \
 curl.exe -X POST http://127.0.0.1:8000/query -H "Content-Type: application/json" --data-binary "@query.json"
 ```
 
-Configuration
-
-Settings can be configured via environment variables or in code:
+## Configuration
 
 | Variable | Default | Description |
 |----------|---------|-------------|
@@ -220,7 +218,7 @@ Additional settings in `app/rag_workspace.py`:
 - `temperature`: default `0.0`
 - `num_predict`: default `180`
 
-Storage
+## Storage
 
 - Index artifacts: `artifacts/workspaces/{workspace_id}/`
 - Uploaded files: `data/workspaces/{workspace_id}/raw/`
@@ -322,15 +320,36 @@ results = evaluate_rag_system(items, rag_fn, k=5)
 save_evaluation_results(results, "results.json")
 ```
 
-Troubleshooting
+### Experiment: Bank CenterCredit Public Policies
 
-Ollama not responding: Ensure Ollama is running with `ollama serve`
+We tested this RAG system on a dataset of 25 questions based on publicly available Bank CenterCredit (BCC) policy documents, including sustainability reports, climate strategy, information security policy, E&S risk management policy, and consolidated financial statements.
 
-Empty citations: Normal behavior; citations are filtered to only include referenced chunks
+**Source documents:** [Google Drive](https://drive.google.com/drive/folders/1QWn1dX7XO0H_Co7U0GItJQC73-GlGzwd?usp=drive_link)
 
-Windows JSON body errors: Use a JSON file with `--data-binary "@file.json"` instead of inline JSON
+**Evaluation dataset:** `examples/evaluation_dataset_bcc.json` (25 questions across 7 categories: financial, climate strategy, ESG policy, information security, governance, social, and reporting)
 
-Slow index building: Install PyTorch with CUDA support (see GPU Acceleration section above). Verify with:
+**Results (K=5, 25 samples):**
+
+| Metric | Score |
+|--------|-------|
+| Precision@5 | 0.960 |
+| Recall@5 | 0.960 |
+| MRR | 0.960 |
+| NDCG@5 | 0.960 |
+| Faithfulness | 0.834 |
+| Answer Relevance | 0.900 |
+
+**Setup:** `qwen2.5:3b-instruct` via Ollama, `intfloat/multilingual-e5-small` embeddings, `ms-marco-MiniLM-L-6-v2` reranker, NVIDIA RTX 4050 GPU.
+
+## Troubleshooting
+
+**Ollama not responding:** Ensure Ollama is running with `ollama serve`
+
+**Empty citations:** Normal behavior; citations are filtered to only include referenced chunks
+
+**Windows JSON body errors:** Use a JSON file with `--data-binary "@file.json"` instead of inline JSON
+
+**Slow index building:** Install PyTorch with CUDA support (see GPU Acceleration section above). Verify with:
 ```bash
 python -c "import torch; print(torch.cuda.is_available())"
 ```

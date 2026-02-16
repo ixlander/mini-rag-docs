@@ -23,3 +23,6 @@ data/processed/
 
 # Logs
 *.log
+
+# Evaluation results
+results*.json
