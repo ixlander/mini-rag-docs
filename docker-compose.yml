@@ -13,3 +13,14 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
     restart: unless-stopped
+
+  frontend:
+    build: .
+    command: streamlit run frontend.py --server.port 8501 --server.address 0.0.0.0
+    ports:
+      - "8501:8501"
+    environment:
+      - API_URL=http://mini-rag:8000
+    depends_on:
+      - mini-rag
+    restart: unless-stopped

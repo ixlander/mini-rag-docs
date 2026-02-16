@@ -27,3 +27,5 @@ python-dateutil==2.9.0.post0
 tqdm==4.67.1
 
 python-multipart==0.0.9
+
+streamlit>=1.30

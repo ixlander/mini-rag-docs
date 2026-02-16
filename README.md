@@ -98,6 +98,23 @@ pip install torch torchvision torchaudio --index-url https://download.pytorch.or
 
 Replace `cu121` with your CUDA version if different (e.g. `cu124`, `cu128`). Check your CUDA driver version with `nvidia-smi`.
 
+## Frontend (Streamlit)
+
+A browser-based chat UI is included. Start the API server first, then run:
+
+```bash
+streamlit run frontend.py
+```
+
+The UI opens at `http://localhost:8501` and connects to the API at `http://127.0.0.1:8000`.
+Override the API URL with the `API_URL` environment variable if needed.
+
+Features:
+- Create / select workspaces
+- Upload documents (drag & drop)
+- Build FAISS index
+- Chat with citations
+
 ## Docker Setup
 
 ### Prerequisites for Docker:
@@ -233,6 +250,7 @@ mini-rag-docs/
 │   ├── workspaces.py        # Workspace ID generation and path management
 │   ├── prompts.py           # System prompts and prompt builders
 │   └── evaluation.py        # Evaluation metrics and utilities
+├── frontend.py              # Streamlit chat UI
 ├── ingest/
 │   ├── build_index_lib.py   # FAISS index building pipeline
 │   ├── parsers.py           # Multi-format document parsers
@@ -242,6 +260,7 @@ mini-rag-docs/
 │   ├── run_evaluation.py    # Example evaluation script
 │   ├── evaluation_dataset_example.json  # Sample evaluation dataset
 │   └── evaluation_dataset_bcc.json      # Real evaluation dataset (25 questions, BCC docs)
+├── frontend.py              # Streamlit chat UI
 ├── Dockerfile
 ├── docker-compose.yml
 └── requirements.txt
