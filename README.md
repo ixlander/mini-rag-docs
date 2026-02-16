@@ -345,9 +345,9 @@ We tested this RAG system on a dataset of 25 questions based on publicly availab
 
 **Source documents:** [Google Drive](https://drive.google.com/drive/folders/1QWn1dX7XO0H_Co7U0GItJQC73-GlGzwd?usp=drive_link)
 
-**Evaluation dataset:** `examples/evaluation_dataset_bcc.json` (25 questions across 7 categories: financial, climate strategy, ESG policy, information security, governance, social, and reporting)
+**Evaluation dataset:** `examples/evaluation_dataset_bcc.json` (24 questions across 7 categories: financial, climate strategy, ESG policy, information security, governance, social, and reporting)
 
-**Results (K=5, 25 samples, embedding-based):**
+**Results (K=5, 24 samples, embedding-based):**
 
 | Metric | Score |
 |--------|-------|
