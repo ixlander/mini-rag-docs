@@ -11,6 +11,7 @@ import faiss
 import numpy as np
 import pandas as pd
 import requests
+import torch
 from sentence_transformers import SentenceTransformer, CrossEncoder
 
 from app.prompts import SYSTEM_PROMPT, build_context_block, build_user_prompt
@@ -37,10 +38,12 @@ class WorkspaceRAGConfig:
 class WorkspaceRAG:
     def __init__(self, cfg: WorkspaceRAGConfig) -> None:
         self.cfg = cfg
+        device = "cuda" if torch.cuda.is_available() else "cpu"
+        logger.info("Using device: %s", device)
         logger.info("Loading embedding model: %s", cfg.embed_model)
-        self.embedder = SentenceTransformer(cfg.embed_model)
+        self.embedder = SentenceTransformer(cfg.embed_model, device=device)
         logger.info("Loading reranker model: %s", cfg.rerank_model)
-        self.reranker = CrossEncoder(cfg.rerank_model)
+        self.reranker = CrossEncoder(cfg.rerank_model, device=device)
 
     def _load_artifacts(self, artifacts_dir: str) -> Tuple[faiss.Index, pd.DataFrame, Dict[str, str], Dict[str, Dict[str, Any]]]:
         art = Path(artifacts_dir)

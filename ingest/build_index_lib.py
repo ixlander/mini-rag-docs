@@ -4,13 +4,24 @@ import json
 from pathlib import Path
 from typing import Dict, List
 
+import logging
+
 import faiss
 import numpy as np
 import pandas as pd
+import torch
 from sentence_transformers import SentenceTransformer
 
 from ingest.parsers import iter_docs
 from ingest.chunking import chunk_corpus
+
+logger = logging.getLogger(__name__)
+
+
+def _resolve_device(device: str | None) -> str:
+    if device is not None:
+        return device
+    return "cuda" if torch.cuda.is_available() else "cpu"
 
 
 def _ensure_dir(p: Path) -> None:
@@ -44,6 +55,8 @@ def build_index(
     if not chunks:
         raise RuntimeError("No chunks produced from uploaded documents.")
 
+    device = _resolve_device(device)
+    logger.info("Using device: %s", device)
     model = SentenceTransformer(embed_model, device=device)
 
     texts: List[str] = []
