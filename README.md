@@ -1,7 +1,7 @@
 # Mini-RAG Docs
 
 ![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue)
-![Tests](https://img.shields.io/badge/tests-67%20passed-green)
+![Tests](https://img.shields.io/badge/tests-93%20passed-green)
 ![License: MIT](https://img.shields.io/badge/license-MIT-yellow)
 
 A local-first RAG system that indexes documents per workspace and answers questions with citations — evaluated across 2 domains with 54 ground-truth questions.
@@ -37,6 +37,9 @@ A local-first RAG system that indexes documents per workspace and answers questi
 ## Key Features
 
 - **Multi-workspace isolation** — each workspace has its own document store and index
+- **API-key authentication** — Bearer-token auth with per-user workspace ownership
+- **Persistent SQLite database** — tracks users, workspaces, documents, and conversations
+- **Conversation memory** — multi-turn Q&A with context carried across messages
 - **5 file formats** — Markdown, HTML, TXT, PDF, DOCX
 - **Two-stage retrieval** — FAISS vector search → cross-encoder reranking for precision
 - **Multilingual** — E5-small embeddings with automatic language detection in prompts
@@ -50,13 +53,15 @@ A local-first RAG system that indexes documents per workspace and answers questi
 | Component | Technology |
 |-----------|-----------|
 | API | FastAPI + Uvicorn |
+| Auth | Bearer-token (SHA-256 hashed API keys) |
+| Database | SQLite (WAL mode) |
 | Embeddings | sentence-transformers (`intfloat/multilingual-e5-small`), CUDA auto-detected |
 | Reranking | CrossEncoder (`ms-marco-MiniLM-L-6-v2`) |
 | Vector Store | FAISS (IndexFlatIP, cosine similarity) |
 | LLM | Ollama (default: `qwen2.5:3b-instruct`) |
 | Document Parsing | BeautifulSoup4, pypdf, python-docx |
 | Evaluation | Faithfulness, Answer Relevance (embedding), LLM-as-Judge |
-| Testing | pytest (67 unit tests) |
+| Testing | pytest (67 unit tests + auth/DB/conversation tests) |
 
 ## Setup
 
@@ -78,20 +83,44 @@ uvicorn app.main:app --reload
 ## Quick Start
 
 ```bash
-# 1. Create workspace
-curl -X POST http://127.0.0.1:8000/workspaces
+# 1. Register a user (returns an API key)
+curl -X POST http://127.0.0.1:8000/register -H "Content-Type: application/json" -d '{"name":"alice"}'
+# → {"user_id":1,"api_key":"abc123...","message":"Save this API key..."}
+
+# 2. Create workspace (use the API key from step 1)
+curl -X POST http://127.0.0.1:8000/workspaces \
+  -H "Authorization: Bearer abc123..." \
+  -H "Content-Type: application/json" \
+  -d '{"description":"my docs"}'
 # → {"workspace_id":"WRPgUdZzpPAoPyYv"}
 
-# 2. Upload files
-curl -X POST http://127.0.0.1:8000/upload/WRPgUdZzpPAoPyYv -F "files=@document.pdf"
+# 3. Upload files
+curl -X POST http://127.0.0.1:8000/upload/WRPgUdZzpPAoPyYv \
+  -H "Authorization: Bearer abc123..." \
+  -F "files=@document.pdf"
 
-# 3. Build index
-curl -X POST http://127.0.0.1:8000/build_index/WRPgUdZzpPAoPyYv
+# 4. Build index
+curl -X POST http://127.0.0.1:8000/build_index/WRPgUdZzpPAoPyYv \
+  -H "Authorization: Bearer abc123..."
 
-# 4. Query
-curl -X POST http://127.0.0.1:8000/query \
+# 5. Start a conversation
+curl -X POST http://127.0.0.1:8000/conversations \
+  -H "Authorization: Bearer abc123..." \
   -H "Content-Type: application/json" \
-  -d '{"workspace_id":"WRPgUdZzpPAoPyYv","question":"What is this document about?"}'
+  -d '{"workspace_id":"WRPgUdZzpPAoPyYv","title":"my chat"}'
+# → {"conversation_id":1}
+
+# 6. Query (with conversation memory)
+curl -X POST http://127.0.0.1:8000/query \
+  -H "Authorization: Bearer abc123..." \
+  -H "Content-Type: application/json" \
+  -d '{"workspace_id":"WRPgUdZzpPAoPyYv","question":"What is this document about?","conversation_id":1}'
+
+# 7. Follow-up (same conversation — the system remembers context)
+curl -X POST http://127.0.0.1:8000/query \
+  -H "Authorization: Bearer abc123..." \
+  -H "Content-Type: application/json" \
+  -d '{"workspace_id":"WRPgUdZzpPAoPyYv","question":"Can you elaborate on that?","conversation_id":1}'
 ```
 
 <details>
@@ -191,17 +220,24 @@ python -m pytest tests/ -v
 
 ## API Endpoints
 
-- `POST /workspaces` - create a new workspace
-- `GET /status/{workspace_id}` - check workspace status and index availability
-- `POST /upload/{workspace_id}` - upload files (md, txt, html, pdf, docx)
-- `POST /upload_dir/{workspace_id}` - upload all supported files from a local directory
-- `POST /build_index/{workspace_id}` - build the FAISS index for the workspace
-- `POST /query` - ask a question about uploaded documents
+- `POST /register` - create a new user (returns API key)
+- `POST /workspaces` - create a new workspace (auth required)
+- `GET /workspaces` - list your workspaces (auth required)
+- `GET /status/{workspace_id}` - check workspace status and documents (auth required)
+- `POST /upload/{workspace_id}` - upload files (md, txt, html, pdf, docx) (auth required)
+- `POST /upload_dir/{workspace_id}` - upload all supported files from a local directory (auth required)
+- `POST /build_index/{workspace_id}` - build the FAISS index (auth required)
+- `POST /conversations` - create a conversation in a workspace (auth required)
+- `GET /conversations/{workspace_id}` - list conversations (auth required)
+- `GET /conversations/{workspace_id}/{conversation_id}/messages` - get conversation messages (auth required)
+- `POST /query` - ask a question, optionally with `conversation_id` for multi-turn context (auth required)
+- `GET /health` - health check (no auth)
 
 ## Configuration
 
 | Variable | Default | Description |
 |----------|---------|-------------|
+| `DATABASE_PATH` | `minirag.db` (project root) | SQLite database file path |
 | `OLLAMA_URL` | `http://localhost:11434/api/generate` | Ollama API endpoint |
 | `OLLAMA_MODEL` | `qwen2.5:3b-instruct` | LLM model name |
 | `EMBED_MODEL` | `intfloat/multilingual-e5-small` | Embedding model |
@@ -213,6 +249,7 @@ Additional settings in `app/rag_workspace.py`:
 
 ## Storage
 
+- Database: `minirag.db` (users, workspaces, documents, conversations, messages)
 - Index artifacts: `artifacts/workspaces/{workspace_id}/`
 - Uploaded files: `data/workspaces/{workspace_id}/raw/`
 
@@ -222,9 +259,11 @@ Additional settings in `app/rag_workspace.py`:
 mini-rag-docs/
 ├── app/
 │   ├── main.py              # FastAPI routes and endpoints
+│   ├── auth.py              # Bearer-token authentication dependency
+│   ├── database.py          # SQLite persistent store (users, workspaces, docs, conversations)
 │   ├── rag_workspace.py     # RAG engine (retrieve → rerank → generate)
 │   ├── workspaces.py        # Workspace ID generation and path management
-│   ├── prompts.py           # System prompts and prompt builders
+│   ├── prompts.py           # System prompts, prompt builders, conversation history
 │   └── evaluation.py        # Evaluation metrics and utilities
 ├── frontend.py              # Streamlit chat UI
 ├── ingest/
@@ -334,9 +373,9 @@ Dataset format:
 ## Limitations
 
 - **Small LLM** — the 3B-parameter model limits completeness scores; a larger model (7B+) would likely improve judge metrics
-- **No authentication** — workspaces are not access-controlled; intended for local/internal use
-- **No persistent database** — FAISS indexes live on disk; no metadata DB for search filtering
-- **Single-query context** — no conversation memory across queries
+- **Conversation window vs context trade-off** — conversation history consumes prompt tokens, reducing space for retrieved chunks; long conversations may degrade retrieval quality
+- **No role-based access control** — authentication is all-or-nothing per workspace; no fine-grained permissions (read-only, admin, etc.)
+- **SQLite scalability** — sufficient for local/small-team use; a production deployment with many concurrent users would benefit from PostgreSQL
 
 ## Troubleshooting
 
