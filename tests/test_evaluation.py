@@ -113,22 +113,23 @@ class TestNDCGAtK:
 
 
 class TestFaithfulness:
-    def test_perfect_faithfulness(self):
-        answer = "The quick brown fox"
+    def test_high_faithfulness(self):
+        answer = "The quick brown fox jumps over the lazy dog"
         contexts = ["The quick brown fox jumps over the lazy dog"]
-        assert calculate_faithfulness(answer, contexts) == 1.0
+        score = calculate_faithfulness(answer, contexts)
+        assert score > 0.8
 
     def test_partial_faithfulness(self):
-        answer = "The quick brown fox"
-        contexts = ["The quick brown"]
+        answer = "The economy grew by 5% in 2024"
+        contexts = ["GDP growth reached 5% during the year 2024"]
         score = calculate_faithfulness(answer, contexts)
-        assert 0.0 < score < 1.0
+        assert 0.3 < score < 1.0
 
-    def test_zero_faithfulness(self):
-        answer = "hello world"
-        contexts = ["different text entirely"]
+    def test_low_faithfulness(self):
+        answer = "The weather is sunny today"
+        contexts = ["Bank CenterCredit reported net profit of 202 billion tenge"]
         score = calculate_faithfulness(answer, contexts)
-        assert score >= 0.0
+        assert score < 0.8
 
     def test_empty_answer(self):
         assert calculate_faithfulness("", ["some context"]) == 0.0
@@ -138,23 +139,24 @@ class TestFaithfulness:
 
 
 class TestAnswerRelevance:
-    def test_perfect_relevance(self):
-        answer = "The answer is yes"
-        question = "Is the answer yes"
-        score = calculate_answer_relevance(answer, question)
-        assert score > 0.5
+    def test_high_relevance(self):
+        answer = "The net profit was 202 billion tenge"
+        question = "What was the net profit?"
+        ground_truth = "Net profit exceeded 202 billion tenge"
+        score = calculate_answer_relevance(answer, question, ground_truth)
+        assert score > 0.6
 
     def test_partial_relevance(self):
-        answer = "The sky is blue"
-        question = "What color is the sky"
+        answer = "The bank has 4000 employees"
+        question = "How many staff does the bank have?"
         score = calculate_answer_relevance(answer, question)
         assert score > 0.0
 
-    def test_zero_relevance(self):
-        answer = "hello world"
-        question = "something completely different"
+    def test_low_relevance(self):
+        answer = "The weather is sunny today"
+        question = "What is the bank's net profit?"
         score = calculate_answer_relevance(answer, question)
-        assert score >= 0.0
+        assert score < 0.8
 
     def test_empty_answer(self):
         assert calculate_answer_relevance("", "question") == 0.0
@@ -190,6 +192,17 @@ class TestEvaluateAnswer:
         assert 'answer_relevance' in result
         assert result['faithfulness'] > 0.5
         assert result['answer_relevance'] > 0.0
+
+    def test_with_ground_truth(self):
+        answer = "Net profit was 202 billion tenge"
+        question = "What was the net profit?"
+        contexts = ["The net profit exceeded 202 billion tenge in 2024"]
+        ground_truth = "Net profit exceeded 202 billion tenge"
+
+        result = evaluate_answer(answer, question, contexts, ground_truth=ground_truth)
+
+        assert result['faithfulness'] > 0.5
+        assert result['answer_relevance'] > 0.5
 
 
 class TestLoadEvaluationDataset:

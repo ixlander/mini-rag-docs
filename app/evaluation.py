@@ -2,13 +2,34 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set
 
 import numpy as np
+import torch
+from sentence_transformers import SentenceTransformer
 
 logger = logging.getLogger(__name__)
+
+_embedder: SentenceTransformer | None = None
+
+
+def _get_embedder() -> SentenceTransformer:
+    global _embedder
+    if _embedder is None:
+        model_name = os.getenv("EMBED_MODEL", "intfloat/multilingual-e5-small")
+        device = "cuda" if torch.cuda.is_available() else "cpu"
+        logger.info("Evaluation: loading embedder %s on %s", model_name, device)
+        _embedder = SentenceTransformer(model_name, device=device)
+    return _embedder
+
+
+def _cosine_sim(a: np.ndarray, b: np.ndarray) -> float:
+    dot = float(np.dot(a, b))
+    norm = float(np.linalg.norm(a) * np.linalg.norm(b)) + 1e-12
+    return dot / norm
 
 
 @dataclass
@@ -112,39 +133,34 @@ def calculate_ndcg_at_k(retrieved_ids: List[str], relevant_ids: Set[str], k: int
 def calculate_faithfulness(answer: str, retrieved_contexts: List[str]) -> float:
     if not answer or not retrieved_contexts:
         return 0.0
-    
-    answer_tokens = set(answer.lower().split())
-    if not answer_tokens:
+
+    context_text = " ".join(c.strip() for c in retrieved_contexts if c.strip())
+    if not context_text:
         return 0.0
-    
-    context_text = " ".join(retrieved_contexts).lower()
-    context_tokens = set(context_text.split())
-    
-    if not context_tokens:
-        return 0.0
-    
-    overlap = answer_tokens.intersection(context_tokens)
-    return len(overlap) / len(answer_tokens)
+
+    embedder = _get_embedder()
+    embs = embedder.encode([answer, context_text], convert_to_numpy=True)
+    return float(max(0.0, _cosine_sim(embs[0], embs[1])))
 
 
-def calculate_answer_relevance(answer: str, question: str) -> float:
+def calculate_answer_relevance(answer: str, question: str, ground_truth: str = "") -> float:
     if not answer or not question:
         return 0.0
-    
-    answer_tokens = set(answer.lower().split())
-    question_tokens = set(question.lower().split())
-    
-    if not answer_tokens or not question_tokens:
-        return 0.0
-    
-    overlap = answer_tokens.intersection(question_tokens)
-    precision = len(overlap) / len(answer_tokens) if answer_tokens else 0
-    recall = len(overlap) / len(question_tokens) if question_tokens else 0
-    
-    if precision + recall == 0:
-        return 0.0
-    
-    return 2 * (precision * recall) / (precision + recall)
+
+    texts = [answer, question]
+    if ground_truth:
+        texts.append(ground_truth)
+
+    embedder = _get_embedder()
+    embs = embedder.encode(texts, convert_to_numpy=True)
+
+    sim_q = max(0.0, _cosine_sim(embs[0], embs[1]))
+
+    if ground_truth:
+        sim_gt = max(0.0, _cosine_sim(embs[0], embs[2]))
+        return float(0.4 * sim_q + 0.6 * sim_gt)
+
+    return float(sim_q)
 
 
 def evaluate_retrieval(
@@ -165,11 +181,12 @@ def evaluate_retrieval(
 def evaluate_answer(
     answer: str,
     question: str,
-    retrieved_contexts: List[str]
+    retrieved_contexts: List[str],
+    ground_truth: str = ""
 ) -> Dict[str, float]:
     return {
         'faithfulness': calculate_faithfulness(answer, retrieved_contexts),
-        'answer_relevance': calculate_answer_relevance(answer, question),
+        'answer_relevance': calculate_answer_relevance(answer, question, ground_truth),
     }
 
 
@@ -207,7 +224,8 @@ def evaluate_rag_system(
             answer_result = evaluate_answer(
                 answer,
                 item.question,
-                retrieved_texts
+                retrieved_texts,
+                ground_truth=item.ground_truth_answer
             )
             answer_metrics_list.append(answer_result)
             
