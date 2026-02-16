@@ -15,7 +15,7 @@ import requests
 import torch
 from sentence_transformers import SentenceTransformer, CrossEncoder
 
-from app.prompts import SYSTEM_PROMPT, build_context_block, build_user_prompt
+from app.prompts import SYSTEM_PROMPT, build_context_block, build_user_prompt, build_conversation_history
 
 logger = logging.getLogger(__name__)
 
@@ -150,7 +150,7 @@ class WorkspaceRAG:
                 return None
         return None
 
-    def answer(self, artifacts_dir: str, question: str, debug: bool = False) -> Dict[str, Any]:
+    def answer(self, artifacts_dir: str, question: str, debug: bool = False, conversation_history: str = "") -> Dict[str, Any]:
         logger.info("Answering question for workspace at %s", artifacts_dir)
         index, _, id_map, chunk_by_id = self._load_artifacts(artifacts_dir)
 
@@ -183,7 +183,7 @@ class WorkspaceRAG:
         reranked = self._rerank(question, candidates)
         top_chunks = [c for _, c in reranked[: self.cfg.context_k]]
         context_block = build_context_block(top_chunks)
-        prompt = build_user_prompt(question=question, context_block=context_block)
+        prompt = build_user_prompt(question=question, context_block=context_block, conversation_history=conversation_history)
 
         raw = self._ollama_generate(prompt)
         parsed = self._safe_parse_json(raw) or {"answer": raw.strip(), "citations": [c["chunk_id"] for c in top_chunks], "confidence": "medium"}
@@ -206,7 +206,7 @@ class WorkspaceRAG:
             }
 
         return parsed
-    def answer_stream(self, artifacts_dir: str, question: str) -> Generator[str, None, None]:
+    def answer_stream(self, artifacts_dir: str, question: str, conversation_history: str = "") -> Generator[str, None, None]:
         index, _, id_map, chunk_by_id = self._load_artifacts(artifacts_dir)
         q_emb = self._embed_query(question)
         D, I = index.search(q_emb, self.cfg.top_k)
@@ -235,7 +235,7 @@ class WorkspaceRAG:
         reranked = self._rerank(question, candidates)
         top_chunks = [c for _, c in reranked[: self.cfg.context_k]]
         context_block = build_context_block(top_chunks)
-        prompt = build_user_prompt(question=question, context_block=context_block)
+        prompt = build_user_prompt(question=question, context_block=context_block, conversation_history=conversation_history)
 
         for token in self._ollama_generate(prompt, stream=True):
             yield token
