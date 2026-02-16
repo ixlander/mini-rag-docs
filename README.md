@@ -5,15 +5,29 @@ A FastAPI service for creating per-workspace document indexes and answering ques
 ## Architecture
 
 ```
-┌─────────────┐     ┌──────────────┐     ┌───────────────┐     ┌──────────┐
-│  Upload API  │────▶│  Parsers     │────▶│  Chunking     │────▶│  FAISS   │
-│  (FastAPI)   │     │  MD/HTML/PDF │     │  Token-based  │     │  Index   │
-└─────────────┘     │  DOCX/TXT    │     │  + Overlap    │     └────┬─────┘
-                    └──────────────┘     └───────────────┘          │
-┌─────────────┐                                                     │
-│  Query API   │──▶ Embed ──▶ Retrieve ──▶ Rerank ──▶ LLM ──▶ Answer + Citations
-│  (FastAPI)   │    (E5)      (FAISS)     (Cross-     (Ollama)
-└─────────────┘                           Encoder)
+┌─────────────┐    ┌──────────────┐    ┌───────────────┐    ┌──────────┐
+│  Upload API │ -> │   Parsers    │ -> │   Chunking    │ -> │  FAISS   │
+│  (FastAPI)  │    │ MD/HTML/PDF  │    │ Token +Overlap│    │  Index   │
+│             │    │  DOCX/TXT    │    │               │    │          │
+└─────────────┘    └──────────────┘    └───────────────┘    └──────────┘
+                                                                      │
+                                                                      ▼
+                                                           ┌─────────────┐
+                                                           │  Query API  │
+                                                           │  (FastAPI)  │
+                                                           └─────┬───────┘
+                                                                 │
+                                                                 ▼
+                       ┌─────────┐    ┌──────────┐    ┌─────────────┐    ┌─────────┐
+                       │  Embed  │ -> │ Retrieve │ -> │   Rerank    │ -> │   LLM   │
+                       │  (E5)   │    │  (FAISS) │    │ Cross-Enc.  │    │ (Ollama)│
+                       └─────────┘    └──────────┘    └─────────────┘    └─────────┘
+                                                                 │
+                                                                 ▼
+                                                      ┌────────────────────┐
+                                                      │ Answer + Citations │
+                                                      └────────────────────┘
+
 ```
 
 ## Key Features
