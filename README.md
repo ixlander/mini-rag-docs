@@ -347,16 +347,14 @@ We tested this RAG system on a dataset of 25 questions based on publicly availab
 
 **Evaluation dataset:** `examples/evaluation_dataset_bcc.json` (25 questions across 7 categories: financial, climate strategy, ESG policy, information security, governance, social, and reporting)
 
-**Results (K=5, 25 samples):**
+**Results (K=5, 25 samples, embedding-based):**
 
 | Metric | Score |
 |--------|-------|
-| Precision@5 | 0.960 |
-| Recall@5 | 0.960 |
-| MRR | 0.960 |
-| NDCG@5 | 0.960 |
-| Faithfulness | 0.834 |
-| Answer Relevance | 0.900 |
+| Faithfulness (embedding) | 0.834 |
+| Answer Relevance (embedding) | 0.900 |
+
+> Retrieval metrics (Precision, Recall, MRR, NDCG) are implemented but omitted here — they require human-annotated `relevant_chunk_ids` to be meaningful. The codebase includes an optional **LLM-as-judge** mode (`--judge`) that scores each answer on faithfulness, relevance, and completeness (1-5 scale) for a more credible evaluation.
 
 **Setup:** `qwen2.5:3b-instruct` via Ollama, `intfloat/multilingual-e5-small` embeddings, `ms-marco-MiniLM-L-6-v2` reranker, NVIDIA RTX 4050 GPU.
 
