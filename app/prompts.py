@@ -58,11 +58,51 @@ def build_context_block(chunks: List[Dict], max_chars: int = 12000) -> str:
     return "\n".join(parts).strip()
 
 
-def build_user_prompt(question: str, context_block: str) -> str:
-    return (
-        "CONTEXT:\n"
-        f"{context_block}\n\n"
-        "QUESTION:\n"
-        f"{question}\n\n"
-        "Return JSON only."
-    )
+def build_user_prompt(question: str, context_block: str, conversation_history: str = "") -> str:
+    parts: List[str] = []
+
+    if conversation_history:
+        parts.append("CONVERSATION HISTORY:")
+        parts.append(conversation_history)
+        parts.append("")
+
+    parts.append("CONTEXT:")
+    parts.append(context_block)
+    parts.append("")
+    parts.append("QUESTION:")
+    parts.append(question)
+    parts.append("")
+    parts.append("Return JSON only.")
+
+    return "\n".join(parts)
+
+
+def build_conversation_history(messages: List[Dict], max_chars: int = 2000) -> str:
+    """Format recent messages into a compact history block.
+
+    Parameters
+    ----------
+    messages : list[dict]
+        Each dict must have ``role`` and ``content`` keys.
+    max_chars : int
+        Truncate from the *oldest* side so the most recent context fits.
+    """
+    if not messages:
+        return ""
+
+    lines: List[str] = []
+    total = 0
+
+    # Walk newest → oldest, stop when budget is exhausted.
+    for msg in reversed(messages):
+        role = msg["role"].upper()
+        content = (msg.get("content") or "").strip()
+        line = f"{role}: {content}"
+        if total + len(line) > max_chars:
+            break
+        lines.append(line)
+        total += len(line)
+
+    # Reverse back to chronological order.
+    lines.reverse()
+    return "\n".join(lines)
