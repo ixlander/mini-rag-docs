@@ -46,7 +46,7 @@ A FastAPI service for creating per-workspace document indexes and answering ques
 | Component | Technology |
 |-----------|-----------|
 | API | FastAPI + Uvicorn |
-| Embeddings | sentence-transformers (`intfloat/multilingual-e5-small`) |
+| Embeddings | sentence-transformers (`intfloat/multilingual-e5-small`), CUDA auto-detected |
 | Reranking | CrossEncoder (`ms-marco-MiniLM-L-6-v2`) |
 | Vector Store | FAISS (IndexFlatIP, cosine similarity) |
 | LLM | Ollama (default: `qwen2.5:3b-instruct`) |
@@ -85,6 +85,18 @@ source .venv/bin/activate
 pip install -r requirements.txt
 uvicorn app.main:app --reload
 ```
+
+GPU Acceleration (Optional)
+
+The project auto-detects CUDA at runtime. If a GPU is available, embedding and reranking models run on it automatically, significantly speeding up index building and queries.
+
+By default, `requirements.txt` installs CPU-only PyTorch. To enable GPU acceleration, reinstall PyTorch with CUDA support after the base install:
+
+```bash
+pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu128
+```
+
+Replace `cu128` with your CUDA version if different (e.g. `cu124`, `cu121`). Check your CUDA driver version with `nvidia-smi`.
 
 Docker Setup
 
@@ -316,3 +328,8 @@ Ollama not responding: Ensure Ollama is running with `ollama serve`
 Empty citations: Normal behavior; citations are filtered to only include referenced chunks
 
 Windows JSON body errors: Use a JSON file with `--data-binary "@file.json"` instead of inline JSON
+
+Slow index building: Install PyTorch with CUDA support (see GPU Acceleration section above). Verify with:
+```bash
+python -c "import torch; print(torch.cuda.is_available())"
+```
