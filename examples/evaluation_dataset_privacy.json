@@ -1,0 +1,182 @@
+[
+  {
+    "question": "What personal data does Spotify collect from its users?",
+    "ground_truth_answer": "Spotify collects user profile data including name, email address, phone number, date of birth, gender, street address, and country. It also collects usage data such as search queries, streaming history, playlists created, and information about how users interact with the Spotify Service.",
+    "workspace_id": "5jT2FhlXbA55RFMl",
+    "metadata": {"category": "data_collection", "source": "Spotify", "sector": "Music"}
+  },
+  {
+    "question": "What cookies does Netflix use?",
+    "ground_truth_answer": "Netflix uses essential cookies for service functionality, advertising cookies and resettable device identifiers to make online advertising more relevant, and analytics cookies for optimization purposes. Deletion of essential cookies may result in limited functionality of the service.",
+    "workspace_id": "5jT2FhlXbA55RFMl",
+    "metadata": {"category": "cookies_tracking", "source": "Netflix", "sector": "Video"}
+  },
+  {
+    "question": "What data does Uber collect about riders?",
+    "ground_truth_answer": "Uber collects personal data provided during account creation including name, email, phone number, login credentials, address, profile picture, payment or banking information, and government identification documents. It also collects location data, app usage data, and device data during use of its services.",
+    "workspace_id": "5jT2FhlXbA55RFMl",
+    "metadata": {"category": "data_collection", "source": "Uber", "sector": "Transportation"}
+  },
+  {
+    "question": "What rights do Discord users have regarding their personal data?",
+    "ground_truth_answer": "Discord users have the Right to Know (request disclosure of personal information retained about them) and the Right to Deletion (request deletion of personal information collected or maintained about them). These rights are subject to certain exceptions under applicable laws including the GDPR and LGPD.",
+    "workspace_id": "5jT2FhlXbA55RFMl",
+    "metadata": {"category": "user_rights", "source": "Discord", "sector": "Communication"}
+  },
+  {
+    "question": "How long does Apple retain personal data?",
+    "ground_truth_answer": "Apple retains personal data only for so long as necessary to fulfill the purposes for which it was collected, including as described in their Privacy Policy or service-specific privacy notices, or as required by law.",
+    "workspace_id": "5jT2FhlXbA55RFMl",
+    "metadata": {"category": "data_retention", "source": "Apple", "sector": "Various"}
+  },
+  {
+    "question": "Does Meta sell user data to advertisers?",
+    "ground_truth_answer": "No, Meta states that they do not sell any user information to anyone and never will. However, they do share aggregated statistics and insights with partners who use their analytics services.",
+    "workspace_id": "5jT2FhlXbA55RFMl",
+    "metadata": {"category": "data_sharing", "source": "Meta", "sector": "Social"}
+  },
+  {
+    "question": "What data does LinkedIn collect about its members?",
+    "ground_truth_answer": "LinkedIn collects information when members send, receive, or engage with messages in connection with its Services. Registered users share their professional identities and engage with their network. LinkedIn also collects data through enterprise services such as Recruiter, Sales Navigator, LinkedIn Learning, and Campaign Manager.",
+    "workspace_id": "5jT2FhlXbA55RFMl",
+    "metadata": {"category": "data_collection", "source": "LinkedIn", "sector": "Social"}
+  },
+  {
+    "question": "How does PayPal process personal data?",
+    "ground_truth_answer": "PayPal processes personal data for a variety of reasons justified under data protection laws in the EEA and Switzerland. This includes operating and providing services, managing risk and preventing fraud, sharing aggregated statistical data with third parties, processing transactions, and keeping financial information up to date.",
+    "workspace_id": "5jT2FhlXbA55RFMl",
+    "metadata": {"category": "data_processing", "source": "PayPal", "sector": "Finance"}
+  },
+  {
+    "question": "Does Reddit sell user data?",
+    "ground_truth_answer": "Reddit does not explicitly state that they sell user data. They store information for as long as necessary for the purposes for which it was collected, and may retain certain information for legitimate business purposes or as required by law. Users have choices about how to protect and limit the collection, use, and sharing of their information.",
+    "workspace_id": "5jT2FhlXbA55RFMl",
+    "metadata": {"category": "data_sharing", "source": "Reddit", "sector": "Social"}
+  },
+  {
+    "question": "How does Slack handle enterprise customer data?",
+    "ground_truth_answer": "Slack collects and receives Customer Data through Workspace accounts where customers or individuals grant access. Customers provide email addresses, phone numbers, passwords, domain names, and other account details. Paid Services customers provide billing details and financial information.",
+    "workspace_id": "5jT2FhlXbA55RFMl",
+    "metadata": {"category": "data_collection", "source": "Slack", "sector": "Work"}
+  },
+  {
+    "question": "What biometric data does Nike collect through its apps?",
+    "ground_truth_answer": "Nike collects sensor data including heart rate and GPS location data through its apps. It also collects data when users interact with Nike through websites, digital experiences, and other products and services.",
+    "workspace_id": "5jT2FhlXbA55RFMl",
+    "metadata": {"category": "data_collection", "source": "Nike", "sector": "Sports"}
+  },
+  {
+    "question": "Does Tinder share user data with Match Group affiliates?",
+    "ground_truth_answer": "Yes, Tinder shares user data with Match Group affiliates. Tinder is part of the Match Group family of businesses. They also share information with service providers for data hosting and maintenance, analytics, customer care, marketing, advertising, payment processing, and security operations.",
+    "workspace_id": "5jT2FhlXbA55RFMl",
+    "metadata": {"category": "data_sharing", "source": "Tinder", "sector": "Dating"}
+  },
+  {
+    "question": "What types of data does Booking.com collect from users?",
+    "ground_truth_answer": "Booking.com collects IP addresses, date and time of service access, hardware and software information, searches and reservations made from different devices. They also use cross-device tracking to combine data collected from particular browsers or mobile devices, and collect data when users connect using Facebook or Google accounts.",
+    "workspace_id": "5jT2FhlXbA55RFMl",
+    "metadata": {"category": "data_collection", "source": "Booking.com", "sector": "Travel"}
+  },
+  {
+    "question": "Does Twitch share user viewing data with third parties?",
+    "ground_truth_answer": "Twitch may use third-party web analytics services that use cookies and other tracking technologies to analyze how users use the Twitch Services. The automatically collected information may be shared with or collected directly by these services. Twitch also shares information with game publishers to facilitate purchases and awards of digital goods.",
+    "workspace_id": "5jT2FhlXbA55RFMl",
+    "metadata": {"category": "data_sharing", "source": "Twitch", "sector": "Video"}
+  },
+  {
+    "question": "What data does Epic Games collect from children?",
+    "ground_truth_answer": "Epic Games may ask for age-related information to comply with COPPA, such as date of birth, to determine whether verifiable parental consent is required. Children can play approved games like Fortnite, Rocket League, or Fall Guys, access communications and social features, and interact with Epic Services.",
+    "workspace_id": "5jT2FhlXbA55RFMl",
+    "metadata": {"category": "children_privacy", "source": "Epic Games", "sector": "Gaming"}
+  },
+  {
+    "question": "Does Signal collect user message content?",
+    "ground_truth_answer": "No, Signal cannot decrypt or otherwise access the content of user messages or calls. Signal utilizes state-of-the-art security and end-to-end encryption to provide private messaging and Internet calling services.",
+    "workspace_id": "5jT2FhlXbA55RFMl",
+    "metadata": {"category": "data_collection", "source": "Signal", "sector": "Communication"}
+  },
+  {
+    "question": "What personal data does Telegram store on its servers?",
+    "ground_truth_answer": "Telegram stores random sequences of symbols that have no meaning without the keys known only to the user and their recipient. Messages, media and files from secret chats, as well as call contents and Telegram Passport data, are processed only on the user's device.",
+    "workspace_id": "5jT2FhlXbA55RFMl",
+    "metadata": {"category": "data_collection", "source": "Telegram", "sector": "Communication"}
+  },
+  {
+    "question": "What information does Quora collect when users visit the platform?",
+    "ground_truth_answer": "Quora collects information directly from individuals, from third parties, and automatically through the Quora Platform. This includes activity data such as questions and answers posted, followers and following lists, topics of interest, and credential information listed on profiles.",
+    "workspace_id": "5jT2FhlXbA55RFMl",
+    "metadata": {"category": "data_collection", "source": "Quora", "sector": "Social"}
+  },
+  {
+    "question": "Does Steam share user gaming data with game publishers?",
+    "ground_truth_answer": "Yes, Steam shares certain information with game developers and publishers through the Steamworks API, including game ownership, leaderboard information, game progress, achievements completed, multiplayer matchmaking information, in-game items, and other data needed to operate the game and provide support. However, Steam does not knowingly share personally identifying information like real names.",
+    "workspace_id": "5jT2FhlXbA55RFMl",
+    "metadata": {"category": "data_sharing", "source": "Steam", "sector": "Gaming"}
+  },
+  {
+    "question": "Does Evernote access the content of user notes?",
+    "ground_truth_answer": "Evernote limits the use of user content to ensure that no one at Evernote can view it unless the user expressly gives permission or it is necessary to comply with legal obligations. To help refine or improve technology, they may ask for permission to review portions of user content.",
+    "workspace_id": "5jT2FhlXbA55RFMl",
+    "metadata": {"category": "data_processing", "source": "Evernote", "sector": "Work"}
+  },
+  {
+    "question": "What data does DoorDash collect about delivery orders?",
+    "ground_truth_answer": "DoorDash collects information related to orders placed through their services including items purchased, special instructions, date and time of order, subtotal, photos provided to DoorDash, and other purchasing or consuming histories or tendencies. They also collect technical information such as browser type, operating system, and IP address.",
+    "workspace_id": "5jT2FhlXbA55RFMl",
+    "metadata": {"category": "data_collection", "source": "DoorDash", "sector": "Food"}
+  },
+  {
+    "question": "How does Cisco handle personal data transfers?",
+    "ground_truth_answer": "Cisco is responsible for the processing of personal information it receives and subsequently transfers. It shares personal data with law enforcement officials, government authorities, or other third parties as necessary to comply with legal process or meet national security requirements, and to protect the rights, property, or safety of individuals.",
+    "workspace_id": "5jT2FhlXbA55RFMl",
+    "metadata": {"category": "data_sharing", "source": "Cisco", "sector": "Work"}
+  },
+  {
+    "question": "What data does Snapchat collect from third-party services?",
+    "ground_truth_answer": "Snapchat may collect information from other users, affiliates, and third parties. For example, if a user links their Snapchat account to another service like Bitmoji or a third-party app, Snapchat may collect data from those services.",
+    "workspace_id": "5jT2FhlXbA55RFMl",
+    "metadata": {"category": "data_collection", "source": "Snapchat", "sector": "Social"}
+  },
+  {
+    "question": "How does Zoom handle meeting participant information?",
+    "ground_truth_answer": "When users send messages or join meetings and webinars on Zoom, other people and organizations, including third parties outside the meeting or webinar, may be able to see content and information. Zoom stores information about meeting settings including audio and video settings, recording file location, and screen sharing settings.",
+    "workspace_id": "5jT2FhlXbA55RFMl",
+    "metadata": {"category": "data_processing", "source": "Zoom", "sector": "Communication"}
+  },
+  {
+    "question": "Does Spotify allow users to control their public data?",
+    "ground_truth_answer": "Spotify users can control certain public data including their profile name, profile photo, public playlists, who they follow on the Spotify Service, and who follows them. Users can remove followers. Users may also choose to share additional personal data.",
+    "workspace_id": "5jT2FhlXbA55RFMl",
+    "metadata": {"category": "user_rights", "source": "Spotify", "sector": "Music"}
+  },
+  {
+    "question": "What data retention period does Microsoft specify for advertising?",
+    "ground_truth_answer": "For personalized advertising, Microsoft retains data for no more than 13 months, unless they obtain user consent to retain the data longer. In some cases, they share data with advertisers.",
+    "workspace_id": "5jT2FhlXbA55RFMl",
+    "metadata": {"category": "data_retention", "source": "Microsoft", "sector": "Various"}
+  },
+  {
+    "question": "How does Booking.com implement cross-device tracking?",
+    "ground_truth_answer": "With cross-device tracking, Booking.com is able to track user activity across multiple devices. As part of cross-device tracking, they may combine data collected from a particular browser or mobile device with data from other devices used by the same user.",
+    "workspace_id": "5jT2FhlXbA55RFMl",
+    "metadata": {"category": "cookies_tracking", "source": "Booking.com", "sector": "Travel"}
+  },
+  {
+    "question": "Does Telegram use payments data?",
+    "ground_truth_answer": "Telegram does not process payments from users directly. Instead, it relies on different payment providers through the Payment Platform for Bots, which is available to users as of Telegram 4.0.",
+    "workspace_id": "5jT2FhlXbA55RFMl",
+    "metadata": {"category": "data_processing", "source": "Telegram", "sector": "Communication"}
+  },
+  {
+    "question": "Does Apple share personal data with third-party partners?",
+    "ground_truth_answer": "Yes, Apple may partner with third parties to provide services. Third parties that receive personal data shared by Apple for their own purposes must delete or return the personal data once they have fulfilled Apple's request.",
+    "workspace_id": "5jT2FhlXbA55RFMl",
+    "metadata": {"category": "data_sharing", "source": "Apple", "sector": "Various"}
+  },
+  {
+    "question": "How does Epic Games handle third-party account linking?",
+    "ground_truth_answer": "With user permission, such as when linking external accounts with an Epic account or using an Epic account to sign in to third-party games and services or participate in cross-promotional events, Epic Games may collect additional information from those third-party services.",
+    "workspace_id": "5jT2FhlXbA55RFMl",
+    "metadata": {"category": "data_collection", "source": "Epic Games", "sector": "Gaming"}
+  }
+]

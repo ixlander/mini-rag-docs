@@ -259,8 +259,8 @@ mini-rag-docs/
 ├── examples/
 │   ├── run_evaluation.py    # Example evaluation script
 │   ├── evaluation_dataset_example.json  # Sample evaluation dataset
-│   └── evaluation_dataset_bcc.json      # Real evaluation dataset (25 questions, BCC docs)
-├── frontend.py              # Streamlit chat UI
+│   ├── evaluation_dataset_bcc.json      # BCC evaluation dataset (24 questions)
+│   └── evaluation_dataset_privacy.json  # Privacy policy evaluation dataset (30 questions)
 ├── Dockerfile
 ├── docker-compose.yml
 └── requirements.txt
@@ -370,6 +370,38 @@ We tested this RAG system on a dataset of 24 questions based on publicly availab
 | Completeness (LLM judge, 1-5) | 1.62 |
 
 **Setup:** `qwen2.5:3b-instruct` via Ollama, `intfloat/multilingual-e5-small` embeddings, `ms-marco-MiniLM-L-6-v2` reranker, NVIDIA RTX 4050 GPU.
+
+### Experiment 2: Tech Company Privacy Policies
+
+To validate cross-domain generalization, we evaluated the same pipeline on a completely different corpus — 97 annotated privacy policy PDFs from major tech companies and online platforms.
+
+**Source:** [Annotated Privacy Policies of 100 Online Platforms](https://data.mendeley.com/datasets/pcgvm6zh43/1) (Mendeley Data, CC BY 4.0, DOI: `10.17632/pcgvm6zh43.1`)
+
+**Corpus:** 97 PDFs from 28+ companies across 13 sectors (social media, streaming, e-commerce, fintech, gaming, etc.) → 2,429 chunks after indexing.
+
+**Evaluation dataset:** `examples/evaluation_dataset_privacy.json` (30 questions across 7 categories: data collection, data sharing, data processing, data retention, user rights, cookies & tracking, children's privacy)
+
+**Results (30 samples):**
+
+| Metric | Score |
+|--------|-------|
+| Faithfulness (embedding) | 0.873 |
+| Answer Relevance (embedding) | 0.922 |
+| Faithfulness (LLM judge, 1-5) | 2.87 |
+| Relevance (LLM judge, 1-5) | 3.40 |
+| Completeness (LLM judge, 1-5) | 1.83 |
+
+### Cross-Domain Comparison
+
+| Metric | BCC (24 samples) | Privacy (30 samples) |
+|--------|:-:|:-:|
+| Faithfulness (embedding) | 0.837 | 0.873 |
+| Answer Relevance (embedding) | 0.901 | 0.922 |
+| Faithfulness (judge) | 2.08 | 2.87 |
+| Relevance (judge) | 2.92 | 3.40 |
+| Completeness (judge) | 1.62 | 1.83 |
+
+The privacy policy corpus scored higher across all metrics, likely due to the structured and repetitive nature of privacy policy documents (standard GDPR/CCPA sections) compared to the more varied BCC financial/ESG reports.
 
 ## Troubleshooting
 
