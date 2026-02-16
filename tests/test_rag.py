@@ -31,7 +31,7 @@ class TestSafeParseJson:
 class TestWorkspaceRAGConfig:
     def test_default_values(self):
         cfg = WorkspaceRAGConfig()
-        assert cfg.top_k == 12
+        assert cfg.top_k == 8
         assert cfg.top_final == 4
         assert cfg.temperature == 0.0
 

@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+import json
 import logging
 from pathlib import Path
 from typing import List
 
 from fastapi import FastAPI, UploadFile, File, HTTPException
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
 from app.workspaces import make_workspace_id, get_paths
@@ -186,11 +188,13 @@ def build_index_for_workspace(workspace_id: str):
     except RuntimeError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
+    rag.invalidate_cache(str(paths.artifacts_dir))
+
     return {"workspace_id": workspace_id, "num_docs": stats["num_docs"], "num_chunks": stats["num_chunks"]}
 
 
 @app.post("/query")
-def query(req: QueryRequest):
+def query(req: QueryRequest, stream: bool = False):
     try:
         paths = get_paths(req.workspace_id)
     except ValueError as e:
@@ -198,5 +202,11 @@ def query(req: QueryRequest):
 
     if not (paths.artifacts_dir / "faiss.index").exists():
         raise HTTPException(status_code=400, detail="Index not built for this workspace. Call /build_index/{workspace_id} first.")
+
+    if stream:
+        return StreamingResponse(
+            rag.answer_stream(artifacts_dir=str(paths.artifacts_dir), question=req.question),
+            media_type="text/event-stream",
+        )
 
     return rag.answer(artifacts_dir=str(paths.artifacts_dir), question=req.question, debug=req.debug)
