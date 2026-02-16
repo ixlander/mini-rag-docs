@@ -227,18 +227,21 @@ if prompt:
                     if citations:
                         with st.expander(f"📎 Citations ({len(citations)})"):
                             for c in citations:
-                                title = c.get("title", "")
-                                section = c.get("section", "")
-                                label = title or section or c.get("chunk_id", "source")
-                                st.markdown(f"**{label}**")
-                                if "text_preview" in c:
-                                    st.caption(c["text_preview"][:300])
+                                if isinstance(c, str):
+                                    st.markdown(f"**{c}**")
+                                else:
+                                    title = c.get("title", "")
+                                    section = c.get("section", "")
+                                    label = title or section or c.get("chunk_id", "source")
+                                    st.markdown(f"**{label}**")
+                                    if "text_preview" in c:
+                                        st.caption(c["text_preview"][:300])
                                 st.divider()
 
                     full_reply = answer
                     if citations:
                         sources = ", ".join(
-                            c.get("title", c.get("chunk_id", ""))
+                            c if isinstance(c, str) else c.get("title", c.get("chunk_id", ""))
                             for c in citations
                         )
                         full_reply += f"\n\n*Sources: {sources}*"
