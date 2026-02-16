@@ -143,6 +143,7 @@ API Endpoints
 - `POST /workspaces` - create a new workspace
 - `GET /status/{workspace_id}` - check workspace status and index availability
 - `POST /upload/{workspace_id}` - upload files (md, txt, html, pdf, docx)
+- `POST /upload_dir/{workspace_id}` - upload all supported files from a local directory
 - `POST /build_index/{workspace_id}` - build the FAISS index for the workspace
 - `POST /query` - ask a question about uploaded documents
 
@@ -157,6 +158,11 @@ Response: `{"workspace_id":"WRPgUdZzpPAoPyYv"}`
 2. Upload files
 ```bash
 curl.exe -X POST http://127.0.0.1:8000/upload/WRPgUdZzpPAoPyYv -F "files=@document.pdf"
+```
+
+Or upload an entire directory:
+```bash
+curl.exe -X POST http://127.0.0.1:8000/upload_dir/WRPgUdZzpPAoPyYv -H "Content-Type: application/json" -d "{\"directory\": \"C:\\Users\\Admin\\Desktop\\company_policies\"}"
 ```
 
 3. Check status

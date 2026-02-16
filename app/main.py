@@ -29,6 +29,10 @@ class BuildIndexResponse(BaseModel):
     num_chunks: int
 
 
+class UploadDirRequest(BaseModel):
+    directory: str = Field(..., min_length=1)
+
+
 class QueryRequest(BaseModel):
     workspace_id: str
     question: str = Field(..., min_length=1)
@@ -69,6 +73,9 @@ def status(workspace_id: str):
         "artifacts_dir": str(paths.artifacts_dir.resolve()),
     }
 
+ALLOWED_EXTENSIONS = {".md", ".markdown", ".txt", ".html", ".htm", ".pdf", ".docx"}
+
+
 @app.post("/upload/{workspace_id}")
 async def upload_files(workspace_id: str, files: List[UploadFile] = File(...)):
     try:
@@ -76,14 +83,13 @@ async def upload_files(workspace_id: str, files: List[UploadFile] = File(...)):
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-    allowed = {".md", ".markdown", ".txt", ".html", ".htm", ".pdf", ".docx"}
     saved = []
     saved_paths = []
 
     for f in files:
         name = Path(f.filename or "file").name
         ext = Path(name).suffix.lower()
-        if ext not in allowed:
+        if ext not in ALLOWED_EXTENSIONS:
             raise HTTPException(status_code=400, detail=f"Unsupported file type: {ext}")
 
         content = await f.read()
@@ -101,6 +107,57 @@ async def upload_files(workspace_id: str, files: List[UploadFile] = File(...)):
         "saved": saved,
         "saved_paths": saved_paths,
         "count": len(saved),
+    }
+
+
+@app.post("/upload_dir/{workspace_id}")
+def upload_directory(workspace_id: str, req: UploadDirRequest):
+    try:
+        paths = get_paths(workspace_id)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    src = Path(req.directory)
+    if not src.exists():
+        raise HTTPException(status_code=400, detail=f"Path does not exist: {req.directory}")
+    if not src.is_dir():
+        raise HTTPException(status_code=400, detail=f"Path is not a directory: {req.directory}")
+
+    saved = []
+    saved_paths = []
+    skipped = []
+
+    for f in sorted(src.rglob("*")):
+        if not f.is_file():
+            continue
+        ext = f.suffix.lower()
+        if ext not in ALLOWED_EXTENSIONS:
+            skipped.append(f.name)
+            continue
+
+        content = f.read_bytes()
+        if not content:
+            skipped.append(f.name)
+            continue
+
+        dst = paths.raw_dir / f.name
+        dst.write_bytes(content)
+        saved.append(f.name)
+        saved_paths.append(str(dst.resolve()))
+
+    if not saved:
+        raise HTTPException(
+            status_code=400,
+            detail=f"No supported files found. Allowed: {', '.join(sorted(ALLOWED_EXTENSIONS))}",
+        )
+
+    return {
+        "workspace_id": workspace_id,
+        "raw_dir": str(paths.raw_dir.resolve()),
+        "saved": saved,
+        "saved_paths": saved_paths,
+        "count": len(saved),
+        "skipped": skipped,
     }
 
 
