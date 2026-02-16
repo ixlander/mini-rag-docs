@@ -37,6 +37,7 @@ A FastAPI service for creating per-workspace document indexes and answering ques
 - **Two-stage retrieval** — FAISS vector search → cross-encoder reranking for precision
 - **Multilingual** — E5-small embeddings with automatic language detection in prompts
 - **Structured output** — JSON responses with answer, citations, and confidence level
+- **Evaluation metrics** — built-in support for measuring retrieval and answer quality
 - **Configurable via environment** — all key settings (models, URLs) via env vars
 - **Docker-ready** — single command deployment with docker-compose
 
@@ -50,7 +51,8 @@ A FastAPI service for creating per-workspace document indexes and answering ques
 | Vector Store | FAISS (IndexFlatIP, cosine similarity) |
 | LLM | Ollama (default: `qwen2.5:3b-instruct`) |
 | Document Parsing | BeautifulSoup4, pypdf, python-docx |
-| Testing | pytest (45 unit tests) |
+| Evaluation | Precision, Recall, MRR, NDCG, Faithfulness, Answer Relevance |
+| Testing | pytest (79 unit tests) |
 
 Prerequisites
 
@@ -213,15 +215,92 @@ mini-rag-docs/
 │   ├── main.py              # FastAPI routes and endpoints
 │   ├── rag_workspace.py     # RAG engine (retrieve → rerank → generate)
 │   ├── workspaces.py        # Workspace ID generation and path management
-│   └── prompts.py           # System prompts and prompt builders
+│   ├── prompts.py           # System prompts and prompt builders
+│   └── evaluation.py        # Evaluation metrics and utilities
 ├── ingest/
 │   ├── build_index_lib.py   # FAISS index building pipeline
 │   ├── parsers.py           # Multi-format document parsers
 │   └── chunking.py          # Token-based chunking with overlap
 ├── tests/                   # Unit tests (pytest)
+├── examples/
+│   ├── run_evaluation.py    # Example evaluation script
+│   └── evaluation_dataset_example.json  # Sample evaluation dataset
 ├── Dockerfile
 ├── docker-compose.yml
 └── requirements.txt
+```
+
+## Evaluation
+
+The system includes built-in evaluation metrics to measure RAG performance:
+
+### Retrieval Metrics
+- **Precision@K** — fraction of retrieved chunks that are relevant
+- **Recall@K** — fraction of relevant chunks that were retrieved
+- **MRR (Mean Reciprocal Rank)** — measures how high the first relevant result appears
+- **NDCG@K** — considers both relevance and ranking position
+
+### Answer Quality Metrics
+- **Faithfulness** — measures if the answer is grounded in retrieved context
+- **Answer Relevance** — measures how relevant the answer is to the question
+
+### Running Evaluation
+
+1. Prepare an evaluation dataset (JSON format):
+```json
+[
+  {
+    "question": "What is RAG?",
+    "ground_truth_answer": "RAG is Retrieval-Augmented Generation...",
+    "relevant_chunk_ids": ["doc1::chunk0001", "doc2::chunk0005"],
+    "workspace_id": "your_workspace_id",
+    "metadata": {"category": "definition"}
+  }
+]
+```
+
+2. Run the evaluation script:
+```bash
+python examples/run_evaluation.py \
+  --dataset examples/evaluation_dataset_example.json \
+  --output results.json \
+  --k 5 \
+  --verbose
+```
+
+3. View results:
+```bash
+cat results.json
+```
+
+The results include both aggregated metrics and detailed per-question results.
+
+### Using Evaluation in Code
+
+```python
+from app.evaluation import (
+    load_evaluation_dataset,
+    evaluate_rag_system,
+    save_evaluation_results
+)
+
+# Load dataset
+items = load_evaluation_dataset("eval_data.json")
+
+# Create RAG function wrapper
+def rag_fn(workspace_id, question):
+    # Your RAG logic here
+    return {
+        'answer': '...',
+        'citations': [...],
+        'retrieved_chunks': [...]
+    }
+
+# Run evaluation
+results = evaluate_rag_system(items, rag_fn, k=5)
+
+# Save results
+save_evaluation_results(results, "results.json")
 ```
 
 Troubleshooting
