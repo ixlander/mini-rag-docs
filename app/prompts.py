@@ -41,15 +41,6 @@ Do NOT return any text outside JSON.
 
 
 def build_context_block(chunks: List[Dict], max_chars: int = 12000) -> str:
-    """
-    Build a context block from top chunks.
-    chunks: list of dicts with keys:
-      - chunk_id
-      - title
-      - section
-      - source_group
-      - text
-    """
     parts: List[str] = []
     total = 0
 

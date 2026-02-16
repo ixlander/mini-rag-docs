@@ -1,16 +1,4 @@
 #!/usr/bin/env python
-"""
-Example script demonstrating how to use the evaluation module.
-
-This script shows how to:
-1. Load an evaluation dataset
-2. Integrate with the RAG system
-3. Run evaluation and get metrics
-4. Save results to a file
-
-Usage:
-    python examples/run_evaluation.py --dataset examples/evaluation_dataset_example.json --output results.json
-"""
 from __future__ import annotations
 
 import argparse
@@ -18,7 +6,6 @@ import logging
 import sys
 from pathlib import Path
 
-# Add parent directory to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from app.evaluation import (
@@ -33,20 +20,12 @@ logger = logging.getLogger(__name__)
 
 
 def create_rag_function(rag_instance: WorkspaceRAG):
-    """
-    Create a RAG function wrapper for evaluation.
-    
-    The evaluation system expects a function that takes (workspace_id, question)
-    and returns a dict with 'answer', 'citations', and 'retrieved_chunks'.
-    """
     def rag_function(workspace_id: str, question: str) -> dict:
         if not workspace_id:
             raise ValueError("workspace_id is required")
         
-        # Get the artifacts directory path
         artifacts_dir = f"artifacts/workspaces/{workspace_id}"
         
-        # Check if artifacts exist
         artifacts_path = Path(artifacts_dir)
         if not artifacts_path.exists() or not (artifacts_path / "faiss.index").exists():
             raise FileNotFoundError(
@@ -54,14 +33,12 @@ def create_rag_function(rag_instance: WorkspaceRAG):
                 f"Please build the index first using /build_index/{workspace_id}"
             )
         
-        # Get RAG response
         response = rag_instance.answer(
             artifacts_dir=artifacts_dir,
             question=question,
-            debug=True  # Enable debug to get retrieved chunks
+            debug=True
         )
         
-        # Extract retrieved chunks from debug info
         retrieved_chunks = []
         if 'debug' in response and 'context_preview' in response['debug']:
             for chunk_preview in response['debug']['context_preview']:
@@ -120,7 +97,6 @@ def main():
         logger.error(f"Error loading dataset: {e}")
         return 1
     
-    # Initialize RAG system
     logger.info("Initializing RAG system...")
     try:
         rag_config = WorkspaceRAGConfig()
@@ -130,7 +106,6 @@ def main():
         logger.error(f"Error initializing RAG system: {e}")
         return 1
     
-    # Run evaluation
     logger.info(f"Running evaluation on {len(evaluation_items)} items...")
     try:
         results = evaluate_rag_system(
@@ -143,7 +118,6 @@ def main():
         logger.error(f"Error during evaluation: {e}")
         return 1
     
-    # Print summary
     logger.info("\n" + "="*60)
     logger.info("EVALUATION RESULTS")
     logger.info("="*60)
@@ -160,7 +134,6 @@ def main():
     logger.info(f"  Samples: {results.answer.num_samples}")
     logger.info("="*60 + "\n")
     
-    # Save results
     logger.info(f"Saving detailed results to {args.output}")
     try:
         save_evaluation_results(results, args.output)

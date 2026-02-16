@@ -13,7 +13,6 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class EvaluationItem:
-    """Single evaluation item with question, ground truth answer and relevant chunks."""
     question: str
     ground_truth_answer: str
     relevant_chunk_ids: List[str]
@@ -23,7 +22,6 @@ class EvaluationItem:
 
 @dataclass
 class RetrievalMetrics:
-    """Retrieval evaluation metrics."""
     precision_at_k: float
     recall_at_k: float
     mrr: float
@@ -33,7 +31,6 @@ class RetrievalMetrics:
 
 @dataclass
 class AnswerMetrics:
-    """Answer quality evaluation metrics."""
     faithfulness: float
     answer_relevance: float
     num_samples: int
@@ -41,28 +38,12 @@ class AnswerMetrics:
 
 @dataclass
 class EvaluationResults:
-    """Complete evaluation results."""
     retrieval: RetrievalMetrics
     answer: AnswerMetrics
     detailed_results: List[Dict[str, Any]]
 
 
 def load_evaluation_dataset(filepath: str) -> List[EvaluationItem]:
-    """
-    Load evaluation dataset from JSON file.
-    
-    Expected format:
-    [
-        {
-            "question": "What is RAG?",
-            "ground_truth_answer": "RAG stands for Retrieval-Augmented Generation...",
-            "relevant_chunk_ids": ["doc1::chunk0001", "doc1::chunk0002"],
-            "workspace_id": "optional_workspace_id",
-            "metadata": {"category": "definition"}
-        },
-        ...
-    ]
-    """
     path = Path(filepath)
     if not path.exists():
         raise FileNotFoundError(f"Evaluation dataset not found: {filepath}")
@@ -84,7 +65,6 @@ def load_evaluation_dataset(filepath: str) -> List[EvaluationItem]:
 
 
 def calculate_precision_at_k(retrieved_ids: List[str], relevant_ids: Set[str], k: int) -> float:
-    """Calculate Precision@K for retrieval."""
     if not retrieved_ids or k == 0:
         return 0.0
     
@@ -94,7 +74,6 @@ def calculate_precision_at_k(retrieved_ids: List[str], relevant_ids: Set[str], k
 
 
 def calculate_recall_at_k(retrieved_ids: List[str], relevant_ids: Set[str], k: int) -> float:
-    """Calculate Recall@K for retrieval."""
     if not relevant_ids:
         return 0.0
     
@@ -104,7 +83,6 @@ def calculate_recall_at_k(retrieved_ids: List[str], relevant_ids: Set[str], k: i
 
 
 def calculate_mrr(retrieved_ids: List[str], relevant_ids: Set[str]) -> float:
-    """Calculate Mean Reciprocal Rank for a single query."""
     for rank, chunk_id in enumerate(retrieved_ids, start=1):
         if chunk_id in relevant_ids:
             return 1.0 / rank
@@ -112,19 +90,16 @@ def calculate_mrr(retrieved_ids: List[str], relevant_ids: Set[str]) -> float:
 
 
 def calculate_ndcg_at_k(retrieved_ids: List[str], relevant_ids: Set[str], k: int) -> float:
-    """Calculate Normalized Discounted Cumulative Gain at K."""
     if not relevant_ids or not retrieved_ids:
         return 0.0
     
     retrieved_at_k = retrieved_ids[:k]
     
-    # DCG: sum of rel_i / log2(i+1)
     dcg = sum(
         (1.0 if chunk_id in relevant_ids else 0.0) / np.log2(idx + 2)
         for idx, chunk_id in enumerate(retrieved_at_k)
     )
     
-    # IDCG: DCG for perfect ranking
     ideal_length = min(len(relevant_ids), k)
     idcg = sum(1.0 / np.log2(idx + 2) for idx in range(ideal_length))
     
@@ -135,16 +110,9 @@ def calculate_ndcg_at_k(retrieved_ids: List[str], relevant_ids: Set[str], k: int
 
 
 def calculate_faithfulness(answer: str, retrieved_contexts: List[str]) -> float:
-    """
-    Calculate faithfulness score (simple keyword-based approach).
-    Measures if answer is grounded in retrieved contexts.
-    
-    Returns value between 0 and 1.
-    """
     if not answer or not retrieved_contexts:
         return 0.0
     
-    # Simple token overlap approach
     answer_tokens = set(answer.lower().split())
     if not answer_tokens:
         return 0.0
@@ -160,15 +128,9 @@ def calculate_faithfulness(answer: str, retrieved_contexts: List[str]) -> float:
 
 
 def calculate_answer_relevance(answer: str, question: str) -> float:
-    """
-    Calculate answer relevance to question (simple keyword-based approach).
-    
-    Returns value between 0 and 1.
-    """
     if not answer or not question:
         return 0.0
     
-    # Simple token overlap approach
     answer_tokens = set(answer.lower().split())
     question_tokens = set(question.lower().split())
     
@@ -176,14 +138,12 @@ def calculate_answer_relevance(answer: str, question: str) -> float:
         return 0.0
     
     overlap = answer_tokens.intersection(question_tokens)
-    # Use harmonic mean of overlap ratios
     precision = len(overlap) / len(answer_tokens) if answer_tokens else 0
     recall = len(overlap) / len(question_tokens) if question_tokens else 0
     
     if precision + recall == 0:
         return 0.0
     
-    # F1-like score
     return 2 * (precision * recall) / (precision + recall)
 
 
@@ -192,17 +152,6 @@ def evaluate_retrieval(
     relevant_chunk_ids: List[str],
     k: int = 5
 ) -> Dict[str, float]:
-    """
-    Evaluate retrieval performance for a single query.
-    
-    Args:
-        retrieved_chunk_ids: List of retrieved chunk IDs (in ranked order)
-        relevant_chunk_ids: List of ground truth relevant chunk IDs
-        k: Number of top results to consider
-    
-    Returns:
-        Dictionary with retrieval metrics
-    """
     relevant_set = set(relevant_chunk_ids)
     
     return {
@@ -218,17 +167,6 @@ def evaluate_answer(
     question: str,
     retrieved_contexts: List[str]
 ) -> Dict[str, float]:
-    """
-    Evaluate answer quality.
-    
-    Args:
-        answer: Generated answer
-        question: Original question
-        retrieved_contexts: List of retrieved context texts
-    
-    Returns:
-        Dictionary with answer quality metrics
-    """
     return {
         'faithfulness': calculate_faithfulness(answer, retrieved_contexts),
         'answer_relevance': calculate_answer_relevance(answer, question),
@@ -241,19 +179,6 @@ def evaluate_rag_system(
     k: int = 5,
     verbose: bool = False
 ) -> EvaluationResults:
-    """
-    Evaluate RAG system end-to-end.
-    
-    Args:
-        evaluation_items: List of evaluation items with questions and ground truth
-        rag_function: Function that takes (workspace_id, question) and returns
-                      {'answer': str, 'citations': List[str], 'retrieved_chunks': List[Dict]}
-        k: Number of top results to consider for retrieval metrics
-        verbose: Whether to print detailed progress
-    
-    Returns:
-        EvaluationResults object with aggregated metrics
-    """
     retrieval_metrics_list = []
     answer_metrics_list = []
     detailed_results = []
@@ -263,18 +188,15 @@ def evaluate_rag_system(
             logger.info(f"Evaluating item {idx + 1}/{len(evaluation_items)}: {item.question[:50]}...")
         
         try:
-            # Get RAG response
             response = rag_function(item.workspace_id, item.question)
             
             answer = response.get('answer', '')
             citations = response.get('citations', [])
             retrieved_chunks = response.get('retrieved_chunks', [])
             
-            # Extract chunk IDs and texts
             retrieved_chunk_ids = [c.get('chunk_id') for c in retrieved_chunks if 'chunk_id' in c]
             retrieved_texts = [c.get('text', '') for c in retrieved_chunks]
             
-            # Evaluate retrieval
             retrieval_result = evaluate_retrieval(
                 retrieved_chunk_ids,
                 item.relevant_chunk_ids,
@@ -282,7 +204,6 @@ def evaluate_rag_system(
             )
             retrieval_metrics_list.append(retrieval_result)
             
-            # Evaluate answer
             answer_result = evaluate_answer(
                 answer,
                 item.question,
@@ -290,7 +211,6 @@ def evaluate_rag_system(
             )
             answer_metrics_list.append(answer_result)
             
-            # Store detailed result
             detailed_results.append({
                 'question': item.question,
                 'ground_truth_answer': item.ground_truth_answer,
@@ -311,7 +231,6 @@ def evaluate_rag_system(
             })
             continue
     
-    # Aggregate retrieval metrics
     if retrieval_metrics_list:
         avg_retrieval = RetrievalMetrics(
             precision_at_k=np.mean([m['precision_at_k'] for m in retrieval_metrics_list]),
@@ -323,7 +242,6 @@ def evaluate_rag_system(
     else:
         avg_retrieval = RetrievalMetrics(0.0, 0.0, 0.0, 0.0, 0)
     
-    # Aggregate answer metrics
     if answer_metrics_list:
         avg_answer = AnswerMetrics(
             faithfulness=np.mean([m['faithfulness'] for m in answer_metrics_list]),
@@ -341,7 +259,6 @@ def evaluate_rag_system(
 
 
 def save_evaluation_results(results: EvaluationResults, output_path: str) -> None:
-    """Save evaluation results to JSON file."""
     output = {
         'retrieval_metrics': {
             'precision_at_k': float(results.retrieval.precision_at_k),

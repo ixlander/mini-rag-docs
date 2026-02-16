@@ -20,7 +20,7 @@ class TestBuildContextBlock:
             for i in range(10)
         ]
         result = build_context_block(chunks, max_chars=6000)
-        assert len(result) <= 6000 + 200  # some header overhead
+        assert len(result) <= 6000 + 200
 
     def test_empty_chunks(self):
         result = build_context_block([])

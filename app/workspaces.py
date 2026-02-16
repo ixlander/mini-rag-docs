@@ -23,7 +23,6 @@ def make_workspace_id() -> str:
 
 
 def validate_workspace_id(workspace_id: str) -> None:
-    """Validate workspace_id to prevent path traversal and injection attacks."""
     if not _WORKSPACE_ID_RE.match(workspace_id):
         raise ValueError(
             "Invalid workspace_id: must be 8-32 alphanumeric characters, hyphens, or underscores."

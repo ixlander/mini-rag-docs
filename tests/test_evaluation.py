@@ -128,7 +128,6 @@ class TestFaithfulness:
         answer = "hello world"
         contexts = ["different text entirely"]
         score = calculate_faithfulness(answer, contexts)
-        # Some overlap might exist with common words
         assert score >= 0.0
 
     def test_empty_answer(self):
@@ -271,7 +270,6 @@ class TestSaveEvaluationResults:
         try:
             save_evaluation_results(results, filepath)
             
-            # Verify file was created and contains correct data
             with open(filepath, 'r') as f:
                 loaded = json.load(f)
             

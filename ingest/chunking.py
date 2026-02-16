@@ -17,11 +17,6 @@ class Chunk:
     url: Optional[str] = None
 
 def estimate_tokens(text: str) -> int:
-    """
-    Cheap token estimate for LLM context sizing.
-    Rule of thumb: ~4 chars/token for English-ish text.
-    For RU it can be a bit different, but fine for chunk sizing.
-    """
     text = text.strip()
     if not text:
         return 0
@@ -33,7 +28,6 @@ _SENT_SPLIT_RE = re.compile(r"(?<=[.!?])\s+")
 
 def split_into_paragraphs(text: str) -> List[str]:
     text = text.strip().replace("\r\n", "\n").replace("\r", "\n")
-    # preserve paragraphs
     parts = [p.strip() for p in re.split(r"\n\s*\n", text) if p.strip()]
     return parts
 
@@ -53,9 +47,6 @@ def chunk_paragraphs(
     max_tokens: int,
     overlap_tokens: int,
 ) -> List[str]:
-    """
-    Packs paragraphs into chunks with approximate token budgeting and overlap.
-    """
     chunks: List[str] = []
     cur_parts: List[str] = []
     cur_tokens = 0
@@ -85,7 +76,6 @@ def chunk_paragraphs(
                 st = estimate_tokens(s)
                 if buf and (buf_tokens + st > max_tokens):
                     chunks.append(" ".join(buf).strip())
-                    # overlap
                     tail = take_overlap_tail(chunks[-1], overlap_tokens)
                     buf = [tail] if tail else []
                     buf_tokens = estimate_tokens(" ".join(buf)) if buf else 0
@@ -114,9 +104,6 @@ def chunk_document(
     max_tokens: int = 550,
     overlap_tokens: int = 80,
 ) -> List[Chunk]:
-    """
-    Produces chunks for all sections of a document.
-    """
     out: List[Chunk] = []
     counter = 0
 
