@@ -3,9 +3,9 @@ from __future__ import annotations
 import json
 import logging
 import os
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set
+from typing import Any, Dict, List, Optional
 
 import numpy as np
 import requests
@@ -37,18 +37,8 @@ def _cosine_sim(a: np.ndarray, b: np.ndarray) -> float:
 class EvaluationItem:
     question: str
     ground_truth_answer: str
-    relevant_chunk_ids: List[str]
     workspace_id: Optional[str] = None
     metadata: Optional[Dict[str, Any]] = None
-
-
-@dataclass
-class RetrievalMetrics:
-    precision_at_k: float
-    recall_at_k: float
-    mrr: float
-    ndcg_at_k: float
-    num_samples: int
 
 
 @dataclass
@@ -68,7 +58,6 @@ class JudgeMetrics:
 
 @dataclass
 class EvaluationResults:
-    retrieval: RetrievalMetrics
     answer: AnswerMetrics
     detailed_results: List[Dict[str, Any]]
     judge: Optional[JudgeMetrics] = None
@@ -149,66 +138,20 @@ def load_evaluation_dataset(filepath: str) -> List[EvaluationItem]:
     path = Path(filepath)
     if not path.exists():
         raise FileNotFoundError(f"Evaluation dataset not found: {filepath}")
-    
+
     with open(path, 'r', encoding='utf-8') as f:
         data = json.load(f)
-    
+
     items = []
     for item in data:
         items.append(EvaluationItem(
             question=item['question'],
             ground_truth_answer=item['ground_truth_answer'],
-            relevant_chunk_ids=item.get('relevant_chunk_ids', []),
             workspace_id=item.get('workspace_id'),
             metadata=item.get('metadata', {})
         ))
-    
+
     return items
-
-
-def calculate_precision_at_k(retrieved_ids: List[str], relevant_ids: Set[str], k: int) -> float:
-    if not retrieved_ids or k == 0:
-        return 0.0
-    
-    retrieved_at_k = retrieved_ids[:k]
-    relevant_retrieved = sum(1 for chunk_id in retrieved_at_k if chunk_id in relevant_ids)
-    return relevant_retrieved / min(k, len(retrieved_at_k))
-
-
-def calculate_recall_at_k(retrieved_ids: List[str], relevant_ids: Set[str], k: int) -> float:
-    if not relevant_ids:
-        return 0.0
-    
-    retrieved_at_k = retrieved_ids[:k]
-    relevant_retrieved = sum(1 for chunk_id in retrieved_at_k if chunk_id in relevant_ids)
-    return relevant_retrieved / len(relevant_ids)
-
-
-def calculate_mrr(retrieved_ids: List[str], relevant_ids: Set[str]) -> float:
-    for rank, chunk_id in enumerate(retrieved_ids, start=1):
-        if chunk_id in relevant_ids:
-            return 1.0 / rank
-    return 0.0
-
-
-def calculate_ndcg_at_k(retrieved_ids: List[str], relevant_ids: Set[str], k: int) -> float:
-    if not relevant_ids or not retrieved_ids:
-        return 0.0
-    
-    retrieved_at_k = retrieved_ids[:k]
-    
-    dcg = sum(
-        (1.0 if chunk_id in relevant_ids else 0.0) / np.log2(idx + 2)
-        for idx, chunk_id in enumerate(retrieved_at_k)
-    )
-    
-    ideal_length = min(len(relevant_ids), k)
-    idcg = sum(1.0 / np.log2(idx + 2) for idx in range(ideal_length))
-    
-    if idcg == 0:
-        return 0.0
-    
-    return dcg / idcg
 
 
 def calculate_faithfulness(answer: str, retrieved_contexts: List[str]) -> float:
@@ -244,21 +187,6 @@ def calculate_answer_relevance(answer: str, question: str, ground_truth: str = "
     return float(sim_q)
 
 
-def evaluate_retrieval(
-    retrieved_chunk_ids: List[str],
-    relevant_chunk_ids: List[str],
-    k: int = 5
-) -> Dict[str, float]:
-    relevant_set = set(relevant_chunk_ids)
-    
-    return {
-        'precision_at_k': calculate_precision_at_k(retrieved_chunk_ids, relevant_set, k),
-        'recall_at_k': calculate_recall_at_k(retrieved_chunk_ids, relevant_set, k),
-        'mrr': calculate_mrr(retrieved_chunk_ids, relevant_set),
-        'ndcg_at_k': calculate_ndcg_at_k(retrieved_chunk_ids, relevant_set, k),
-    }
-
-
 def evaluate_answer(
     answer: str,
     question: str,
@@ -278,31 +206,23 @@ def evaluate_rag_system(
     verbose: bool = False,
     judge: Optional[LLMJudge] = None
 ) -> EvaluationResults:
-    retrieval_metrics_list = []
     answer_metrics_list = []
     detailed_results = []
-    
+
     for idx, item in enumerate(evaluation_items):
         if verbose:
             logger.info(f"Evaluating item {idx + 1}/{len(evaluation_items)}: {item.question[:50]}...")
-        
+
         try:
             response = rag_function(item.workspace_id, item.question)
-            
+
             answer = response.get('answer', '')
             citations = response.get('citations', [])
             retrieved_chunks = response.get('retrieved_chunks', [])
-            
+
             retrieved_chunk_ids = [c.get('chunk_id') for c in retrieved_chunks if 'chunk_id' in c]
             retrieved_texts = [c.get('text', '') for c in retrieved_chunks]
-            
-            retrieval_result = evaluate_retrieval(
-                retrieved_chunk_ids,
-                item.relevant_chunk_ids,
-                k=k
-            )
-            retrieval_metrics_list.append(retrieval_result)
-            
+
             answer_result = evaluate_answer(
                 answer,
                 item.question,
@@ -310,7 +230,7 @@ def evaluate_rag_system(
                 ground_truth=item.ground_truth_answer
             )
             answer_metrics_list.append(answer_result)
-            
+
             judge_result = None
             if judge is not None:
                 judge_result = judge.score(
@@ -324,15 +244,13 @@ def evaluate_rag_system(
                 'question': item.question,
                 'ground_truth_answer': item.ground_truth_answer,
                 'generated_answer': answer,
-                'relevant_chunk_ids': item.relevant_chunk_ids,
                 'retrieved_chunk_ids': retrieved_chunk_ids,
                 'citations': citations,
-                'retrieval_metrics': retrieval_result,
                 'answer_metrics': answer_result,
                 'judge_metrics': judge_result,
                 'metadata': item.metadata
             })
-            
+
         except Exception as e:
             logger.error(f"Error evaluating item {idx + 1}: {e}")
             detailed_results.append({
@@ -340,18 +258,7 @@ def evaluate_rag_system(
                 'error': str(e)
             })
             continue
-    
-    if retrieval_metrics_list:
-        avg_retrieval = RetrievalMetrics(
-            precision_at_k=np.mean([m['precision_at_k'] for m in retrieval_metrics_list]),
-            recall_at_k=np.mean([m['recall_at_k'] for m in retrieval_metrics_list]),
-            mrr=np.mean([m['mrr'] for m in retrieval_metrics_list]),
-            ndcg_at_k=np.mean([m['ndcg_at_k'] for m in retrieval_metrics_list]),
-            num_samples=len(retrieval_metrics_list)
-        )
-    else:
-        avg_retrieval = RetrievalMetrics(0.0, 0.0, 0.0, 0.0, 0)
-    
+
     if answer_metrics_list:
         avg_answer = AnswerMetrics(
             faithfulness=np.mean([m['faithfulness'] for m in answer_metrics_list]),
@@ -360,7 +267,7 @@ def evaluate_rag_system(
         )
     else:
         avg_answer = AnswerMetrics(0.0, 0.0, 0)
-    
+
     avg_judge = None
     if judge is not None:
         judge_results = [r.get('judge_metrics') for r in detailed_results if r.get('judge_metrics')]
@@ -373,7 +280,6 @@ def evaluate_rag_system(
             )
 
     return EvaluationResults(
-        retrieval=avg_retrieval,
         answer=avg_answer,
         detailed_results=detailed_results,
         judge=avg_judge
@@ -382,13 +288,6 @@ def evaluate_rag_system(
 
 def save_evaluation_results(results: EvaluationResults, output_path: str) -> None:
     output = {
-        'retrieval_metrics': {
-            'precision_at_k': float(results.retrieval.precision_at_k),
-            'recall_at_k': float(results.retrieval.recall_at_k),
-            'mrr': float(results.retrieval.mrr),
-            'ndcg_at_k': float(results.retrieval.ndcg_at_k),
-            'num_samples': results.retrieval.num_samples
-        },
         'answer_metrics': {
             'faithfulness': float(results.answer.faithfulness),
             'answer_relevance': float(results.answer.answer_relevance),
@@ -404,7 +303,7 @@ def save_evaluation_results(results: EvaluationResults, output_path: str) -> Non
             'completeness': float(results.judge.completeness),
             'num_samples': results.judge.num_samples
         }
-    
+
     Path(output_path).write_text(
         json.dumps(output, ensure_ascii=False, indent=2),
         encoding='utf-8'

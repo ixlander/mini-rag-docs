@@ -51,8 +51,8 @@ A FastAPI service for creating per-workspace document indexes and answering ques
 | Vector Store | FAISS (IndexFlatIP, cosine similarity) |
 | LLM | Ollama (default: `qwen2.5:3b-instruct`) |
 | Document Parsing | BeautifulSoup4, pypdf, python-docx |
-| Evaluation | Precision, Recall, MRR, NDCG, Faithfulness, Answer Relevance, LLM-as-Judge |
-| Testing | pytest (79 unit tests) |
+| Evaluation | Faithfulness, Answer Relevance (embedding), LLM-as-Judge |
+| Testing | pytest (67 unit tests) |
 
 Prerequisites
 
@@ -251,12 +251,6 @@ mini-rag-docs/
 
 The system includes built-in evaluation metrics to measure RAG performance:
 
-### Retrieval Metrics
-- **Precision@K** — fraction of retrieved chunks that are relevant
-- **Recall@K** — fraction of relevant chunks that were retrieved
-- **MRR (Mean Reciprocal Rank)** — measures how high the first relevant result appears
-- **NDCG@K** — considers both relevance and ranking position
-
 ### Answer Quality Metrics (Embedding-Based)
 - **Faithfulness** — cosine similarity between the answer and retrieved context embeddings; measures if the answer is grounded in what was retrieved
 - **Answer Relevance** — weighted cosine similarity between the answer, the question, and the ground truth answer (40% question similarity + 60% ground truth similarity)
@@ -277,7 +271,6 @@ The judge prompt enforces structured JSON output and uses temperature 0 for repr
   {
     "question": "What is RAG?",
     "ground_truth_answer": "RAG is Retrieval-Augmented Generation...",
-    "relevant_chunk_ids": ["doc1::chunk0001", "doc2::chunk0005"],
     "workspace_id": "your_workspace_id",
     "metadata": {"category": "definition"}
   }
@@ -341,20 +334,21 @@ save_evaluation_results(results, "results.json")
 
 ### Experiment: Bank CenterCredit Public Policies
 
-We tested this RAG system on a dataset of 25 questions based on publicly available Bank CenterCredit (BCC) policy documents, including sustainability reports, climate strategy, information security policy, E&S risk management policy, and consolidated financial statements.
+We tested this RAG system on a dataset of 24 questions based on publicly available Bank CenterCredit (BCC) policy documents, including sustainability reports, climate strategy, information security policy, E&S risk management policy, and consolidated financial statements.
 
 **Source documents:** [Google Drive](https://drive.google.com/drive/folders/1QWn1dX7XO0H_Co7U0GItJQC73-GlGzwd?usp=drive_link)
 
 **Evaluation dataset:** `examples/evaluation_dataset_bcc.json` (24 questions across 7 categories: financial, climate strategy, ESG policy, information security, governance, social, and reporting)
 
-**Results (K=5, 24 samples, embedding-based):**
+**Results (24 samples):**
 
 | Metric | Score |
 |--------|-------|
-| Faithfulness (embedding) | 0.834 |
-| Answer Relevance (embedding) | 0.900 |
-
-> Retrieval metrics (Precision, Recall, MRR, NDCG) are implemented but omitted here — they require human-annotated `relevant_chunk_ids` to be meaningful. The codebase includes an optional **LLM-as-judge** mode (`--judge`) that scores each answer on faithfulness, relevance, and completeness (1-5 scale) for a more credible evaluation.
+| Faithfulness (embedding) | 0.837 |
+| Answer Relevance (embedding) | 0.901 |
+| Faithfulness (LLM judge, 1-5) | 2.08 |
+| Relevance (LLM judge, 1-5) | 2.92 |
+| Completeness (LLM judge, 1-5) | 1.62 |
 
 **Setup:** `qwen2.5:3b-instruct` via Ollama, `intfloat/multilingual-e5-small` embeddings, `ms-marco-MiniLM-L-6-v2` reranker, NVIDIA RTX 4050 GPU.
 

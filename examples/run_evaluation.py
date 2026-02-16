@@ -148,12 +148,6 @@ def main():
     logger.info("\n" + "="*60)
     logger.info("EVALUATION RESULTS")
     logger.info("="*60)
-    logger.info("\nRetrieval Metrics:")
-    logger.info(f"  Precision@{args.k}: {results.retrieval.precision_at_k:.4f}")
-    logger.info(f"  Recall@{args.k}: {results.retrieval.recall_at_k:.4f}")
-    logger.info(f"  MRR: {results.retrieval.mrr:.4f}")
-    logger.info(f"  NDCG@{args.k}: {results.retrieval.ndcg_at_k:.4f}")
-    logger.info(f"  Samples: {results.retrieval.num_samples}")
     
     logger.info("\nAnswer Quality Metrics (Embedding):")
     logger.info(f"  Faithfulness: {results.answer.faithfulness:.4f}")

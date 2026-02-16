@@ -2,7 +2,6 @@
   {
     "question": "What is the purpose of this RAG system?",
     "ground_truth_answer": "This is a FastAPI service for creating per-workspace document indexes and answering questions using a local LLM (Ollama) with embeddings.",
-    "relevant_chunk_ids": ["README.md::chunk0001", "README.md::chunk0002"],
     "workspace_id": "example_workspace",
     "metadata": {
       "category": "system_overview",
@@ -12,7 +11,6 @@
   {
     "question": "What embedding model is used by default?",
     "ground_truth_answer": "The default embedding model is intfloat/multilingual-e5-small from sentence-transformers.",
-    "relevant_chunk_ids": ["README.md::chunk0003"],
     "workspace_id": "example_workspace",
     "metadata": {
       "category": "configuration",
@@ -22,7 +20,6 @@
   {
     "question": "How many file formats are supported?",
     "ground_truth_answer": "5 file formats are supported: Markdown, HTML, TXT, PDF, and DOCX.",
-    "relevant_chunk_ids": ["README.md::chunk0001"],
     "workspace_id": "example_workspace",
     "metadata": {
       "category": "features",

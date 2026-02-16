@@ -35,7 +35,6 @@ Create a JSON file with evaluation questions and ground truth:
   {
     "question": "What is RAG?",
     "ground_truth_answer": "RAG is Retrieval-Augmented Generation...",
-    "relevant_chunk_ids": ["doc1::chunk0001", "doc2::chunk0003"],
     "workspace_id": "YOUR_WORKSPACE_ID",
     "metadata": {"category": "definition"}
   }
@@ -72,13 +71,6 @@ The script will print a summary and save detailed results to JSON:
 EVALUATION RESULTS
 ============================================================
 
-Retrieval Metrics:
-  Precision@5: 0.0000
-  Recall@5: 0.0000
-  MRR: 0.0000
-  NDCG@5: 0.0000
-  Samples: 10
-
 Answer Quality Metrics (Embedding):
   Faithfulness: 0.8340
   Answer Relevance: 0.9000
@@ -92,27 +84,7 @@ LLM-as-Judge Metrics (1-5 scale):
 ============================================================
 ```
 
-Note: Retrieval metrics require human-annotated `relevant_chunk_ids` to be meaningful. Without them, they will be 0. The LLM-as-judge metrics provide a more credible answer quality evaluation.
-
 ## Metrics Explained
-
-### Retrieval Metrics
-
-- **Precision@K**: Of the top K retrieved chunks, what fraction are relevant?
-  - Higher is better (0.0 to 1.0)
-  - Measures retrieval accuracy
-
-- **Recall@K**: Of all relevant chunks, what fraction appear in the top K?
-  - Higher is better (0.0 to 1.0)
-  - Measures retrieval completeness
-
-- **MRR (Mean Reciprocal Rank)**: How high does the first relevant chunk appear?
-  - Higher is better (0.0 to 1.0)
-  - 1.0 means the first result is always relevant
-
-- **NDCG@K**: Considers both relevance and ranking quality
-  - Higher is better (0.0 to 1.0)
-  - Penalizes relevant chunks that appear lower in results
 
 ### Answer Quality Metrics (Embedding-Based)
 
@@ -135,6 +107,5 @@ A second LLM call scores each answer on a 1-5 integer scale:
 ## Notes
 
 - The evaluation script requires that the workspace index is already built
-- Retrieval metrics (Precision, Recall, MRR, NDCG) require human-annotated `relevant_chunk_ids` in the dataset
 - The LLM judge requires a running Ollama instance
 - For production evaluation, create a comprehensive dataset covering various question types and difficulty levels
