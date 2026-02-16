@@ -1,0 +1,277 @@
+[
+  {
+    "question": "What was the net profit of Bank CenterCredit's Banking Group in 2024?",
+    "ground_truth_answer": "The net profit of the Banking Group increased by 50%, exceeding 202 billion tenge in 2024.",
+    "relevant_chunk_ids": [],
+    "workspace_id": "lI8uerJVn4mVKMky",
+    "metadata": {
+      "category": "financial",
+      "difficulty": "easy",
+      "source": "BCC_SR24_eng.pdf"
+    }
+  },
+  {
+    "question": "What is Bank CenterCredit's total assets figure as of 2024?",
+    "ground_truth_answer": "Assets reached 7 trillion tenge in 2024, with an increase of 1.8 trillion tenge.",
+    "relevant_chunk_ids": [],
+    "workspace_id": "lI8uerJVn4mVKMky",
+    "metadata": {
+      "category": "financial",
+      "difficulty": "easy",
+      "source": "BCC_SR24_eng.pdf"
+    }
+  },
+  {
+    "question": "What is BCC's market share in Kazakhstan's banking sector as of 2024?",
+    "ground_truth_answer": "BCC's market share increased to 11.4%, confirming its status as one of the leading banks in Kazakhstan.",
+    "relevant_chunk_ids": [],
+    "workspace_id": "lI8uerJVn4mVKMky",
+    "metadata": {
+      "category": "financial",
+      "difficulty": "easy",
+      "source": "BCC_SR24_eng.pdf"
+    }
+  },
+  {
+    "question": "What are the credit ratings assigned to Bank CenterCredit by S&P and Moody's?",
+    "ground_truth_answer": "Bank CenterCredit's credit ratings were upgraded to BB by S&P and Ba1 by Moody's.",
+    "relevant_chunk_ids": [],
+    "workspace_id": "lI8uerJVn4mVKMky",
+    "metadata": {
+      "category": "financial",
+      "difficulty": "medium",
+      "source": "BCC_SR24_eng.pdf"
+    }
+  },
+  {
+    "question": "What is BCC's green loan portfolio target for 2030 according to the Climate Strategy?",
+    "ground_truth_answer": "BCC set a target of 400 billion KZT for its green loan portfolio by 2030. The projected volumes are: 120 bln KZT in 2025, 163 bln in 2026, 212 bln in 2027, 268 bln in 2028, 331 bln in 2029, and 400 bln in 2030.",
+    "relevant_chunk_ids": [],
+    "workspace_id": "lI8uerJVn4mVKMky",
+    "metadata": {
+      "category": "climate_strategy",
+      "difficulty": "medium",
+      "source": "2bcc-ey-climate-strategy-resulting-materialengversion-1.pdf"
+    }
+  },
+  {
+    "question": "By what percentage does BCC commit to reduce its CO2 emissions by 2030, and compared to which base year?",
+    "ground_truth_answer": "BCC commits to reducing Scope 1, 2 and 3 emissions by 42% by 2030 compared to the base year 2023, in line with the 1.5°C-aligned SBTi pathway requiring annual emission reductions of at least 4.2%.",
+    "relevant_chunk_ids": [],
+    "workspace_id": "lI8uerJVn4mVKMky",
+    "metadata": {
+      "category": "climate_strategy",
+      "difficulty": "medium",
+      "source": "2bcc-ey-climate-strategy-resulting-materialengversion-1.pdf"
+    }
+  },
+  {
+    "question": "What is the total Portfolio Carbon Footprint (Scope 3) of BCC and which sector contributes the most?",
+    "ground_truth_answer": "The total Portfolio Carbon Footprint (Scope 3) is 5.8 million tons of CO2. The energy sector is the largest contributor at 3.5 million tons (60.9%).",
+    "relevant_chunk_ids": [],
+    "workspace_id": "lI8uerJVn4mVKMky",
+    "metadata": {
+      "category": "climate_strategy",
+      "difficulty": "hard",
+      "source": "2bcc-ey-climate-strategy-resulting-materialengversion-1.pdf"
+    }
+  },
+  {
+    "question": "What is BCC's plan for phasing out coal industry financing?",
+    "ground_truth_answer": "BCC plans to phase out coal industry financing by 2045. The plan includes: developing a phase-out policy by 2025-2030, implementing measures to reduce coal financing to 1% of the loan portfolio by 2045, and further actions to fully withdraw coal from the portfolio. Coal industry clients are defined as companies with at least 25% of revenue from coal mining. The Bank does not invest in unconventional oil and gas projects.",
+    "relevant_chunk_ids": [],
+    "workspace_id": "lI8uerJVn4mVKMky",
+    "metadata": {
+      "category": "climate_strategy",
+      "difficulty": "hard",
+      "source": "2bcc-ey-climate-strategy-resulting-materialengversion-1.pdf"
+    }
+  },
+  {
+    "question": "What are the tasks of BCC's Information Security Management System (ISMS)?",
+    "ground_truth_answer": "The tasks of the ISMS include: 1) categorization of information assets; 2) organization of access to information assets; 3) ensuring security of the information infrastructure; 4) monitoring information security activities and measures to identify and analyze threats and vulnerabilities, counteract attacks and investigate incidents; 5) analysis of data on information security incidents; 6) definition of the procedure for managing cryptographic information protection tools; 7) ensuring information security when third parties access information assets; 8) conducting internal audits of the state of information security.",
+    "relevant_chunk_ids": [],
+    "workspace_id": "lI8uerJVn4mVKMky",
+    "metadata": {
+      "category": "information_security",
+      "difficulty": "hard",
+      "source": "IS-Policy-en.pdf"
+    }
+  },
+  {
+    "question": "What is the purpose of the ISMS at Bank CenterCredit?",
+    "ground_truth_answer": "The purpose of the ISMS is to improve efficiency of information security processes, ensure the required level of confidentiality, integrity and availability of critical information assets, and as a result, reduce information security risks and associated damage.",
+    "relevant_chunk_ids": [],
+    "workspace_id": "lI8uerJVn4mVKMky",
+    "metadata": {
+      "category": "information_security",
+      "difficulty": "medium",
+      "source": "IS-Policy-en.pdf"
+    }
+  },
+  {
+    "question": "What are the E&S risk rating levels defined in BCC's Environmental and Social Risk Management Policy?",
+    "ground_truth_answer": "The Policy defines five levels of E&S risk rating: low, reduced, medium, high, and critical. Borrowers with low and reduced ratings are financed under the standard procedure. Medium and high risk ratings are reassessed every 6 months, and critical level is reassessed every 3 months.",
+    "relevant_chunk_ids": [],
+    "workspace_id": "lI8uerJVn4mVKMky",
+    "metadata": {
+      "category": "esg_policy",
+      "difficulty": "medium",
+      "source": "eng_JSC Bank CenterCredit Environmental and Social Risk Management Policy.docx"
+    }
+  },
+  {
+    "question": "What are the key due diligence tools used by BCC for environmental and social risk assessment?",
+    "ground_truth_answer": "The key assessment tools are: 1) Exclusion List - verification if the borrower's activities comply with the non-financing activity list; 2) ESDD (Environmental and Social Due Diligence), which includes self-declaration questionnaires, ESG scoring, and project assessment; 3) Taxonomy Compliance Assessment - screening against green or social taxonomy criteria.",
+    "relevant_chunk_ids": [],
+    "workspace_id": "lI8uerJVn4mVKMky",
+    "metadata": {
+      "category": "esg_policy",
+      "difficulty": "hard",
+      "source": "eng_JSC Bank CenterCredit Environmental and Social Risk Management Policy.docx"
+    }
+  },
+  {
+    "question": "What percentage of total assets do loans to customers represent according to the 2024 consolidated financial statements?",
+    "ground_truth_answer": "Loans to customers represent 53.4% of total assets, as stated in the KPMG-audited consolidated financial statements for 2024.",
+    "relevant_chunk_ids": [],
+    "workspace_id": "lI8uerJVn4mVKMky",
+    "metadata": {
+      "category": "financial",
+      "difficulty": "medium",
+      "source": "BCC_CONS FS_2024_ENG_formatted.pdf"
+    }
+  },
+  {
+    "question": "What two new subsidiaries did Bank CenterCredit establish in 2024?",
+    "ground_truth_answer": "Bank CenterCredit established two subsidiaries: BCC Life, focused on life insurance, and BCC Hub, specialising in the development of innovative IT products.",
+    "relevant_chunk_ids": [],
+    "workspace_id": "lI8uerJVn4mVKMky",
+    "metadata": {
+      "category": "corporate",
+      "difficulty": "easy",
+      "source": "BCC_SR24_eng.pdf"
+    }
+  },
+  {
+    "question": "What S&P Global CSA percentile ranking did Bank CenterCredit achieve?",
+    "ground_truth_answer": "S&P Global CSA awarded BCC a high rating, placing the bank in the 91st percentile among global banks.",
+    "relevant_chunk_ids": [],
+    "workspace_id": "lI8uerJVn4mVKMky",
+    "metadata": {
+      "category": "esg_rating",
+      "difficulty": "medium",
+      "source": "BCC_SR24_eng.pdf"
+    }
+  },
+  {
+    "question": "How many meetings did the Bank's Management Board hold in 2024 and how many issues were considered?",
+    "ground_truth_answer": "In 2024, the Bank's Management Board held 87 in-person meetings, at which 900 issues related to the Bank's core business were considered.",
+    "relevant_chunk_ids": [],
+    "workspace_id": "lI8uerJVn4mVKMky",
+    "metadata": {
+      "category": "governance",
+      "difficulty": "medium",
+      "source": "BCC_SR24_eng.pdf"
+    }
+  },
+  {
+    "question": "What was the total loan portfolio of BCC in 2023 and how did it grow compared to 2022?",
+    "ground_truth_answer": "The total loan portfolio reached 2.9 trillion tenge (2,928,849 million KZT) in 2023, which is 42.3% more compared to 2022.",
+    "relevant_chunk_ids": [],
+    "workspace_id": "lI8uerJVn4mVKMky",
+    "metadata": {
+      "category": "financial",
+      "difficulty": "medium",
+      "source": "2 WEB_BCC_sustainability report_2023_eng_compressed.pdf"
+    }
+  },
+  {
+    "question": "What percentage of BCC employees completed the online ESG course, and what percentage completed the human rights course?",
+    "ground_truth_answer": "More than 75% of the Bank's employees completed the online course on the basics of ESG, and more than 70% completed the online course on human rights.",
+    "relevant_chunk_ids": [],
+    "workspace_id": "lI8uerJVn4mVKMky",
+    "metadata": {
+      "category": "esg_training",
+      "difficulty": "medium",
+      "source": "BCC_SR24_eng.pdf"
+    }
+  },
+  {
+    "question": "What is the gender composition of BCC's senior management at the end of 2024?",
+    "ground_truth_answer": "At the end of 2024, the Bank's senior management consisted of 15 people, of whom 4 were women (27%) and 11 were men (73%). The Management Board specifically has 25% women and 75% men.",
+    "relevant_chunk_ids": [],
+    "workspace_id": "lI8uerJVn4mVKMky",
+    "metadata": {
+      "category": "governance",
+      "difficulty": "medium",
+      "source": "BCC_SR24_eng.pdf"
+    }
+  },
+  {
+    "question": "What is Bank CenterCredit's policy on financing unconventional oil and gas projects?",
+    "ground_truth_answer": "The Bank does not have in its loan portfolio projects related to unconventional types of oil and gas fuels, such as bitumen, shale oil and gas, Arctic oil and gas, liquefied natural gas, as well as ultra-deepwater oil and gas. Moreover, the Bank does not invest in such projects, as well as in coal mining projects.",
+    "relevant_chunk_ids": [],
+    "workspace_id": "lI8uerJVn4mVKMky",
+    "metadata": {
+      "category": "climate_strategy",
+      "difficulty": "medium",
+      "source": "2bcc-ey-climate-strategy-resulting-materialengversion-1.pdf"
+    }
+  },
+  {
+    "question": "What international cryptocurrency regulations does Bank CenterCredit follow?",
+    "ground_truth_answer": "This information is not found in the documentation.",
+    "relevant_chunk_ids": [],
+    "workspace_id": "lI8uerJVn4mVKMky",
+    "metadata": {
+      "category": "negative_test",
+      "difficulty": "easy",
+      "expected_behavior": "should_not_answer"
+    }
+  },
+  {
+    "question": "What was BCC's total social investment in charitable projects in 2023?",
+    "ground_truth_answer": "BCC's social investments in charitable projects totaled 1.78 billion tenge in 2023, covering areas of education, health, ecology, culture and sports, as well as employee support.",
+    "relevant_chunk_ids": [],
+    "workspace_id": "lI8uerJVn4mVKMky",
+    "metadata": {
+      "category": "social",
+      "difficulty": "medium",
+      "source": "2 WEB_BCC_sustainability report_2023_eng_compressed.pdf"
+    }
+  },
+  {
+    "question": "What three methodological approaches does SBTi recommend for financial institutions to set emission reduction targets?",
+    "ground_truth_answer": "SBTi recommends three approaches: 1) Sectoral Decarbonization Approach (SDA) - a sector-oriented approach considering differences in CO2 reduction potential across sectors; 2) SBT Portfolio Coverage Approach - where financial institutions commit to working with borrowers/investors to set their own evidence-based targets; 3) Temperature Rating Approach - where institutions determine the current temperature score of their portfolio based on CO2 reduction targets set by clients.",
+    "relevant_chunk_ids": [],
+    "workspace_id": "lI8uerJVn4mVKMky",
+    "metadata": {
+      "category": "climate_strategy",
+      "difficulty": "hard",
+      "source": "2bcc-ey-climate-strategy-resulting-materialengversion-1.pdf"
+    }
+  },
+  {
+    "question": "When was the Committee for Sustainable Development under BCC's Board of Directors established and how many meetings did it hold in 2024?",
+    "ground_truth_answer": "The Committee for Sustainable Development was established based on the decision of the Board of Directors dated 20 September 2023. In 2024, it held two meetings where it approved the sustainability report, the climate strategy and stress testing results, sustainable development plans for 2025, a roadmap for green bonds, and appointed a new Secretary.",
+    "relevant_chunk_ids": [],
+    "workspace_id": "lI8uerJVn4mVKMky",
+    "metadata": {
+      "category": "governance",
+      "difficulty": "hard",
+      "source": "BCC_SR24_eng.pdf"
+    }
+  },
+  {
+    "question": "What reporting standards did BCC use for its 2023 Sustainability Report?",
+    "ground_truth_answer": "BCC prepared its 2023 Sustainability Report in accordance with the Global Reporting Initiative Standards (GRI Standards), the Sustainability Accounting Standards Board (SASB Standard) for the financial sector (Commercial Banks, Consumer Finance, Mortgage Finance), and the TCFD standard. The report also passed independent limited assurance in accordance with ISAE 3000.",
+    "relevant_chunk_ids": [],
+    "workspace_id": "lI8uerJVn4mVKMky",
+    "metadata": {
+      "category": "reporting",
+      "difficulty": "hard",
+      "source": "2 WEB_BCC_sustainability report_2023_eng_compressed.pdf"
+    }
+  }
+]
