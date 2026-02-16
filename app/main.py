@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from pathlib import Path
 from typing import List
 
@@ -9,6 +10,9 @@ from pydantic import BaseModel, Field
 from app.workspaces import make_workspace_id, get_paths
 from ingest.build_index_lib import build_index
 from app.rag_workspace import WorkspaceRAG, WorkspaceRAGConfig
+
+logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(levelname)s %(message)s")
+logger = logging.getLogger(__name__)
 
 
 app = FastAPI(title="Mini-RAG (Workspaces)")
@@ -45,7 +49,10 @@ def create_workspace():
 
 @app.get("/status/{workspace_id}")
 def status(workspace_id: str):
-    paths = get_paths(workspace_id)
+    try:
+        paths = get_paths(workspace_id)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
     raw_files = []
     if paths.raw_dir.exists():
@@ -64,7 +71,10 @@ def status(workspace_id: str):
 
 @app.post("/upload/{workspace_id}")
 async def upload_files(workspace_id: str, files: List[UploadFile] = File(...)):
-    paths = get_paths(workspace_id)
+    try:
+        paths = get_paths(workspace_id)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
     allowed = {".md", ".markdown", ".txt", ".html", ".htm", ".pdf", ".docx"}
     saved = []
@@ -96,7 +106,10 @@ async def upload_files(workspace_id: str, files: List[UploadFile] = File(...)):
 
 @app.post("/build_index/{workspace_id}", response_model=BuildIndexResponse)
 def build_index_for_workspace(workspace_id: str):
-    paths = get_paths(workspace_id)
+    try:
+        paths = get_paths(workspace_id)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
     raw_files = [p for p in paths.raw_dir.iterdir() if p.is_file()] if paths.raw_dir.exists() else []
     if not raw_files:
@@ -121,7 +134,10 @@ def build_index_for_workspace(workspace_id: str):
 
 @app.post("/query")
 def query(req: QueryRequest):
-    paths = get_paths(req.workspace_id)
+    try:
+        paths = get_paths(req.workspace_id)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
     if not (paths.artifacts_dir / "faiss.index").exists():
         raise HTTPException(status_code=400, detail="Index not built for this workspace. Call /build_index/{workspace_id} first.")

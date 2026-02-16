@@ -2,6 +2,42 @@ Mini-RAG Docs (Workspaces)
 
 A FastAPI service for creating per-workspace document indexes and answering questions using a local LLM (Ollama) with embeddings.
 
+## Architecture
+
+```
+┌─────────────┐     ┌──────────────┐     ┌───────────────┐     ┌──────────┐
+│  Upload API  │────▶│  Parsers     │────▶│  Chunking     │────▶│  FAISS   │
+│  (FastAPI)   │     │  MD/HTML/PDF │     │  Token-based  │     │  Index   │
+└─────────────┘     │  DOCX/TXT    │     │  + Overlap    │     └────┬─────┘
+                    └──────────────┘     └───────────────┘          │
+┌─────────────┐                                                     │
+│  Query API   │──▶ Embed ──▶ Retrieve ──▶ Rerank ──▶ LLM ──▶ Answer + Citations
+│  (FastAPI)   │    (E5)      (FAISS)     (Cross-     (Ollama)
+└─────────────┘                           Encoder)
+```
+
+## Key Features
+
+- **Multi-workspace isolation** — each workspace has its own document store and index
+- **5 file formats** — Markdown, HTML, TXT, PDF, DOCX
+- **Two-stage retrieval** — FAISS vector search → cross-encoder reranking for precision
+- **Multilingual** — E5-small embeddings with automatic language detection in prompts
+- **Structured output** — JSON responses with answer, citations, and confidence level
+- **Configurable via environment** — all key settings (models, URLs) via env vars
+- **Docker-ready** — single command deployment with docker-compose
+
+## Tech Stack
+
+| Component | Technology |
+|-----------|-----------|
+| API | FastAPI + Uvicorn |
+| Embeddings | sentence-transformers (`intfloat/multilingual-e5-small`) |
+| Reranking | CrossEncoder (`ms-marco-MiniLM-L-6-v2`) |
+| Vector Store | FAISS (IndexFlatIP, cosine similarity) |
+| LLM | Ollama (default: `qwen2.5:3b-instruct`) |
+| Document Parsing | BeautifulSoup4, pypdf, python-docx |
+| Testing | pytest (45 unit tests) |
+
 Prerequisites
 
 Python 3.10+
@@ -78,6 +114,14 @@ Stop container:
 docker-compose down
 ```
 
+## Testing
+
+Run the test suite:
+```bash
+pip install pytest
+python -m pytest tests/ -v
+```
+
 API Endpoints
 
 - `POST /workspaces` - create a new workspace
@@ -129,18 +173,42 @@ curl.exe -X POST http://127.0.0.1:8000/query -H "Content-Type: application/json"
 
 Configuration
 
-Ollama settings are in `app/rag_workspace.py`:
-- `ollama_url`: default `http://localhost:11434/api/generate`
-- `ollama_model`: default `qwen2.5:3b-instruct`
+Settings can be configured via environment variables or in code:
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `OLLAMA_URL` | `http://localhost:11434/api/generate` | Ollama API endpoint |
+| `OLLAMA_MODEL` | `qwen2.5:3b-instruct` | LLM model name |
+| `EMBED_MODEL` | `intfloat/multilingual-e5-small` | Embedding model |
+| `RERANK_MODEL` | `cross-encoder/ms-marco-MiniLM-L-6-v2` | Reranking model |
+
+Additional settings in `app/rag_workspace.py`:
 - `temperature`: default `0.0`
 - `num_predict`: default `180`
-
-Embedding model: `intfloat/multilingual-e5-small`
 
 Storage
 
 - Index artifacts: `artifacts/workspaces/{workspace_id}/`
 - Uploaded files: `data/workspaces/{workspace_id}/raw/`
+
+## Project Structure
+
+```
+mini-rag-docs/
+├── app/
+│   ├── main.py              # FastAPI routes and endpoints
+│   ├── rag_workspace.py     # RAG engine (retrieve → rerank → generate)
+│   ├── workspaces.py        # Workspace ID generation and path management
+│   └── prompts.py           # System prompts and prompt builders
+├── ingest/
+│   ├── build_index_lib.py   # FAISS index building pipeline
+│   ├── parsers.py           # Multi-format document parsers
+│   └── chunking.py          # Token-based chunking with overlap
+├── tests/                   # Unit tests (pytest)
+├── Dockerfile
+├── docker-compose.yml
+└── requirements.txt
+```
 
 Troubleshooting
 
