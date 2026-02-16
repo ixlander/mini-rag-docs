@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass
+import logging
+import os
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -13,18 +15,20 @@ from sentence_transformers import SentenceTransformer, CrossEncoder
 
 from app.prompts import SYSTEM_PROMPT, build_context_block, build_user_prompt
 
+logger = logging.getLogger(__name__)
+
 
 @dataclass(frozen=True)
 class WorkspaceRAGConfig:
-    embed_model: str = "intfloat/multilingual-e5-small"
+    embed_model: str = field(default_factory=lambda: os.getenv("EMBED_MODEL", "intfloat/multilingual-e5-small"))
     use_e5_prefix: bool = True
-    rerank_model: str = "cross-encoder/ms-marco-MiniLM-L-6-v2"
+    rerank_model: str = field(default_factory=lambda: os.getenv("RERANK_MODEL", "cross-encoder/ms-marco-MiniLM-L-6-v2"))
     top_k: int = 12
     top_final: int = 4
     context_k: int = 3
     min_retrieval_score: float = 0.25
-    ollama_url: str = "http://localhost:11434/api/generate"
-    ollama_model: str = "qwen2.5:3b-instruct"
+    ollama_url: str = field(default_factory=lambda: os.getenv("OLLAMA_URL", "http://localhost:11434/api/generate"))
+    ollama_model: str = field(default_factory=lambda: os.getenv("OLLAMA_MODEL", "qwen2.5:3b-instruct"))
     ollama_timeout_s: int = 180
     num_predict: int = 180
     temperature: float = 0.0
@@ -33,7 +37,9 @@ class WorkspaceRAGConfig:
 class WorkspaceRAG:
     def __init__(self, cfg: WorkspaceRAGConfig) -> None:
         self.cfg = cfg
+        logger.info("Loading embedding model: %s", cfg.embed_model)
         self.embedder = SentenceTransformer(cfg.embed_model)
+        logger.info("Loading reranker model: %s", cfg.rerank_model)
         self.reranker = CrossEncoder(cfg.rerank_model)
 
     def _load_artifacts(self, artifacts_dir: str) -> Tuple[faiss.Index, pd.DataFrame, Dict[str, str], Dict[str, Dict[str, Any]]]:
@@ -74,6 +80,7 @@ class WorkspaceRAG:
                 "num_predict": int(self.cfg.num_predict),
             },
         }
+        logger.debug("Sending request to Ollama at %s", self.cfg.ollama_url)
         r = requests.post(self.cfg.ollama_url, json=payload, timeout=self.cfg.ollama_timeout_s)
         r.raise_for_status()
         return r.json().get("response", "")
@@ -99,6 +106,7 @@ class WorkspaceRAG:
         return None
 
     def answer(self, artifacts_dir: str, question: str, debug: bool = False) -> Dict[str, Any]:
+        logger.info("Answering question for workspace at %s", artifacts_dir)
         index, _, id_map, chunk_by_id = self._load_artifacts(artifacts_dir)
 
         q_emb = self._embed_query(question)
