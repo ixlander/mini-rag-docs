@@ -93,10 +93,10 @@ The project auto-detects CUDA at runtime. If a GPU is available, embedding and r
 By default, `requirements.txt` installs CPU-only PyTorch. To enable GPU acceleration, reinstall PyTorch with CUDA support after the base install:
 
 ```bash
-pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu128
+pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
 ```
 
-Replace `cu128` with your CUDA version if different (e.g. `cu124`, `cu121`). Check your CUDA driver version with `nvidia-smi`.
+Replace `cu121` with your CUDA version if different (e.g. `cu124`, `cu128`). Check your CUDA driver version with `nvidia-smi`.
 
 Docker Setup
 
