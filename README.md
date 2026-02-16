@@ -242,7 +242,8 @@ mini-rag-docs/
 ├── tests/                   # Unit tests (pytest)
 ├── examples/
 │   ├── run_evaluation.py    # Example evaluation script
-│   └── evaluation_dataset_example.json  # Sample evaluation dataset
+│   ├── evaluation_dataset_example.json  # Sample evaluation dataset
+│   └── evaluation_dataset_bcc.json      # Real evaluation dataset (25 questions, BCC docs)
 ├── Dockerfile
 ├── docker-compose.yml
 └── requirements.txt
@@ -258,9 +259,9 @@ The system includes built-in evaluation metrics to measure RAG performance:
 - **MRR (Mean Reciprocal Rank)** — measures how high the first relevant result appears
 - **NDCG@K** — considers both relevance and ranking position
 
-### Answer Quality Metrics
-- **Faithfulness** — measures if the answer is grounded in retrieved context
-- **Answer Relevance** — measures how relevant the answer is to the question
+### Answer Quality Metrics (Embedding-Based)
+- **Faithfulness** — cosine similarity between the answer and retrieved context embeddings; measures if the answer is grounded in what was retrieved
+- **Answer Relevance** — weighted cosine similarity between the answer, the question, and the ground truth answer (40% question similarity + 60% ground truth similarity)
 
 ### Running Evaluation
 
