@@ -1,7 +1,7 @@
 # Mini-RAG Docs
 
 ![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue)
-![Tests](https://img.shields.io/badge/tests-93%20passed-green)
+![Tests](https://img.shields.io/badge/tests-97%20passed-green)
 ![License: MIT](https://img.shields.io/badge/license-MIT-yellow)
 
 A local-first RAG system that indexes documents per workspace and answers questions with citations — evaluated across 2 domains with 54 ground-truth questions.
@@ -57,12 +57,12 @@ A local-first RAG system that indexes documents per workspace and answers questi
 | Auth | Bearer-token (SHA-256 hashed API keys) |
 | Database | SQLite (WAL mode) |
 | Embeddings | sentence-transformers (`intfloat/multilingual-e5-small`), CUDA auto-detected |
-| Reranking | CrossEncoder (`ms-marco-MiniLM-L-6-v2`) |
+| Reranking | CrossEncoder (`cross-encoder/ms-marco-MiniLM-L-6-v2`) |
 | Vector Store | FAISS (IndexFlatIP, cosine similarity) |
 | LLM | Ollama (default: `qwen2.5:3b-instruct`) |
 | Document Parsing | BeautifulSoup4, pypdf, python-docx |
 | Evaluation | Faithfulness, Answer Relevance (embedding), LLM-as-Judge |
-| Testing | pytest (67 unit tests + auth/DB/conversation tests) |
+| Testing | pytest (97 passed) |
 
 ## Setup
 
@@ -304,7 +304,7 @@ We tested this RAG system on a dataset of 24 questions based on publicly availab
 | Relevance (LLM judge, 1-5) | 2.92 |
 | Completeness (LLM judge, 1-5) | 1.62 |
 
-**Setup:** `qwen2.5:3b-instruct` via Ollama, `intfloat/multilingual-e5-small` embeddings, `ms-marco-MiniLM-L-6-v2` reranker, NVIDIA RTX 4050 GPU.
+**Setup:** `qwen2.5:3b-instruct` via Ollama, `intfloat/multilingual-e5-small` embeddings, `cross-encoder/ms-marco-MiniLM-L-6-v2` reranker, NVIDIA RTX 4050 GPU.
 
 ### Experiment 2: Tech Company Privacy Policies
 
