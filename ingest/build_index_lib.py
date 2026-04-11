@@ -68,7 +68,10 @@ def _build_bm25_meta(rows: List[Dict[str, object]]) -> Dict[str, object]:
 
 
 def _doc_signature(source_path: str) -> str:
-    st = Path(source_path).stat()
+    p = Path(source_path)
+    if not p.exists():
+        return "missing"
+    st = p.stat()
     return f"{int(st.st_mtime)}:{st.st_size}"
 
 

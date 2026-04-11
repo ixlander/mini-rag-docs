@@ -298,7 +298,7 @@ def evaluate_rag_system(
                 else:
                     citation_precision = len(cited_set & retrieved_set) / max(1, len(cited_set))
             else:
-                citation_precision = 1.0 if not answer else 0.0
+                citation_precision = 0.0
 
             abstained = "couldn't find this in the documentation" in answer.lower()
             if abstained:

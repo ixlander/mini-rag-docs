@@ -32,6 +32,8 @@ _SENT_SPLIT_RE = re.compile(r"(?<=[.!?])\s+")
 _LIST_ITEM_RE = re.compile(r"^\s*(?:[-*+]\s+|\d+\.\s+)")
 _TABLE_ROW_RE = re.compile(r"^\s*\|.*\|\s*$")
 _HEADING_RE = re.compile(r"^\s{0,3}#{1,6}\s+")
+MIN_SECTIONS_FOR_QUALITY_BONUS = 3
+MIN_AVG_LEN_FOR_QUALITY_BONUS = 250
 
 
 def split_into_paragraphs(text: str) -> List[str]:
@@ -83,9 +85,9 @@ def _estimate_source_quality(doc: Document) -> float:
     total_chars = sum(len((s.text or "").strip()) for s in doc.sections)
     avg_len = total_chars / non_empty
     score = 0.4
-    if non_empty >= 3:
+    if non_empty >= MIN_SECTIONS_FOR_QUALITY_BONUS:
         score += 0.3
-    if avg_len >= 250:
+    if avg_len >= MIN_AVG_LEN_FOR_QUALITY_BONUS:
         score += 0.2
     if doc.doc_type in {"md", "html", "htm"}:
         score += 0.1

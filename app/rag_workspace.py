@@ -175,6 +175,7 @@ class WorkspaceRAG:
                 if f <= 0.0:
                     continue
                 dfi = int(df.get(tok, 0))
+                # Okapi BM25 IDF with +0.5 smoothing.
                 idf = np.log(1.0 + ((n_docs - dfi + 0.5) / (dfi + 0.5)))
                 den = f + k1 * (1.0 - b + b * (dl / avgdl))
                 s += float(idf * ((f * (k1 + 1.0)) / max(1e-9, den)))
@@ -362,7 +363,9 @@ class WorkspaceRAG:
         parsed["citations"] = cits
         parsed["answer"] = self._redact_pii(str(parsed.get("answer", "")))
 
-        if not cits and parsed.get("confidence") != "low":
+        answer_text = str(parsed.get("answer", "")).strip().lower()
+        is_abstention = "couldn't find this in the documentation." in answer_text
+        if not cits and parsed.get("confidence") != "low" and not is_abstention:
             parsed["confidence"] = "low"
             parsed["answer"] = "I couldn't find this in the documentation."
 
