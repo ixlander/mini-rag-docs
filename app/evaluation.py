@@ -269,7 +269,6 @@ def evaluate_rag_system(
             )
             answer_metrics_list.append(answer_result)
 
-            retrieved_chunk_ids = [c.get('chunk_id') for c in retrieved_chunks if 'chunk_id' in c]
             metadata = item.metadata or {}
             expected_chunk_ids = metadata.get("expected_chunk_ids", []) if isinstance(metadata, dict) else []
             expected_set = {c for c in expected_chunk_ids if isinstance(c, str)}
@@ -303,7 +302,11 @@ def evaluate_rag_system(
 
             abstained = "couldn't find this in the documentation" in answer.lower()
             if abstained:
-                abstention_quality = 1.0 if not expected_set else (0.0 if any(cid in expected_set for cid in retrieved_chunk_ids) else 1.0)
+                if not expected_set:
+                    abstention_quality = 1.0
+                else:
+                    found_expected = any(cid in expected_set for cid in retrieved_chunk_ids)
+                    abstention_quality = 0.0 if found_expected else 1.0
             else:
                 abstention_quality = 1.0
 

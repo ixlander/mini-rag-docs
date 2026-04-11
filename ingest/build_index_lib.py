@@ -15,6 +15,7 @@ from sentence_transformers import SentenceTransformer
 
 from ingest.parsers import iter_docs
 from ingest.chunking import chunk_corpus
+from app.text_utils import tokenize_text
 
 logger = logging.getLogger(__name__)
 
@@ -38,16 +39,12 @@ def _format_for_e5_passage(text: str) -> str:
     return f"passage: {text}"
 
 
-def _tokenize(text: str) -> List[str]:
-    return [t for t in "".join(ch.lower() if ch.isalnum() else " " for ch in text).split() if len(t) > 1]
-
-
 def _build_bm25_meta(rows: List[Dict[str, object]]) -> Dict[str, object]:
     doc_freq: Counter[str] = Counter()
     docs_meta: List[Dict[str, object]] = []
     total_len = 0
     for row in rows:
-        tokens = _tokenize(str(row.get("text", "")))
+        tokens = tokenize_text(str(row.get("text", "")))
         tf = Counter(tokens)
         total_len += len(tokens)
         for tok in tf.keys():

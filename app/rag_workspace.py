@@ -3,7 +3,6 @@ from __future__ import annotations
 import json
 import logging
 import os
-import re
 import hashlib
 import time
 from dataclasses import dataclass, field
@@ -18,6 +17,7 @@ import torch
 from sentence_transformers import SentenceTransformer, CrossEncoder
 
 from app.prompts import SYSTEM_PROMPT, build_context_block, build_user_prompt
+from app.text_utils import redact_pii, tokenize_text
 
 logger = logging.getLogger(__name__)
 
@@ -58,10 +58,6 @@ class WorkspaceRAG:
         self._embedding_cache: Dict[str, np.ndarray] = {}
         self._answer_cache: Dict[str, Dict[str, Any]] = {}
         self._warmup()
-
-    _EMAIL_RE = re.compile(r"\b[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}\b")
-    _PHONE_RE = re.compile(r"(?<!\d)(?:\+?\d[\d\-\s().]{7,}\d)(?!\d)")
-    _CARD_RE = re.compile(r"(?<!\d)(?:\d[ -]?){13,19}(?!\d)")
 
     def _warmup(self) -> None:
         logger.info("Warming up models...")
@@ -114,19 +110,16 @@ class WorkspaceRAG:
 
     @staticmethod
     def _tokenize(text: str) -> List[str]:
-        return [t for t in "".join(ch.lower() if ch.isalnum() else " " for ch in text).split() if len(t) > 1]
+        return tokenize_text(text)
 
     @staticmethod
     def _redact_pii(text: str) -> str:
-        text = WorkspaceRAG._EMAIL_RE.sub("[REDACTED_EMAIL]", text or "")
-        text = WorkspaceRAG._PHONE_RE.sub("[REDACTED_PHONE]", text)
-        text = WorkspaceRAG._CARD_RE.sub("[REDACTED_CARD]", text)
-        return text
+        return redact_pii(text)
 
     def _analyze_query(self, question: str) -> Dict[str, Any]:
         q = (question or "").strip()
         ql = q.lower()
-        is_cyr = bool(re.search(r"[а-яё]", ql))
+        is_cyr = bool(any("а" <= ch <= "я" or ch == "ё" for ch in ql))
         language = "ru" if is_cyr else "en"
         intent = "factoid"
         if any(k in ql for k in ("list", "перечис", "steps", "шаг")):
@@ -323,7 +316,7 @@ class WorkspaceRAG:
 
         cache_key = f"{artifacts_dir}|{rewritten_question}|{conversation_history}"
         cached = self._answer_cache.get(cache_key)
-        if cached and (time.time() - cached.get("ts", 0)) <= self.cfg.answer_cache_ttl_s:
+        if cached and (time.monotonic() - cached.get("ts", 0.0)) <= self.cfg.answer_cache_ttl_s:
             return cached["value"]
 
         candidates, best_score, retrieval_diag = self._retrieve_candidates(
@@ -397,7 +390,7 @@ class WorkspaceRAG:
             }
 
         if self.cfg.enable_answer_cache:
-            self._answer_cache[cache_key] = {"ts": time.time(), "value": parsed}
+            self._answer_cache[cache_key] = {"ts": time.monotonic(), "value": parsed}
         return parsed
     def answer_stream(self, artifacts_dir: str, question: str, conversation_history: str = "") -> Generator[str, None, None]:
         index, _, id_map, chunk_by_id, bm25 = self._load_artifacts(artifacts_dir)

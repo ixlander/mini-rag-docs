@@ -9,6 +9,7 @@ from typing import List, Optional, Tuple
 from bs4 import BeautifulSoup
 from docx import Document as DocxDocument
 from pypdf import PdfReader
+from app.text_utils import redact_pii
 
 
 
@@ -34,9 +35,6 @@ class Document:
 
 _WHITESPACE_RE = re.compile(r"[ \t]+")
 _BLANK_LINES_RE = re.compile(r"\n{3,}")
-_EMAIL_RE = re.compile(r"\b[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}\b")
-_PHONE_RE = re.compile(r"(?<!\d)(?:\+?\d[\d\-\s().]{7,}\d)(?!\d)")
-_CARD_RE = re.compile(r"(?<!\d)(?:\d[ -]?){13,19}(?!\d)")
 
 
 def _normalize_text(s: str) -> str:
@@ -48,10 +46,7 @@ def _normalize_text(s: str) -> str:
 
 
 def _redact_pii(s: str) -> str:
-    s = _EMAIL_RE.sub("[REDACTED_EMAIL]", s)
-    s = _PHONE_RE.sub("[REDACTED_PHONE]", s)
-    s = _CARD_RE.sub("[REDACTED_CARD]", s)
-    return s
+    return redact_pii(s)
 
 
 def _make_doc_id(path: Path, root_dir: Path) -> str:

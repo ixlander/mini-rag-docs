@@ -87,7 +87,7 @@ def _estimate_source_quality(doc: Document) -> float:
         score += 0.3
     if avg_len >= 250:
         score += 0.2
-    if doc.doc_type in {"md", "markdown", "html", "htm"}:
+    if doc.doc_type in {"md", "html", "htm"}:
         score += 0.1
     return min(1.0, max(0.0, score))
 
