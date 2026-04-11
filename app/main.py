@@ -5,7 +5,7 @@ import logging
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from fastapi import Depends, FastAPI, File, HTTPException, UploadFile
+from fastapi import BackgroundTasks, Depends, FastAPI, File, HTTPException, UploadFile
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
@@ -22,6 +22,7 @@ logger = logging.getLogger(__name__)
 
 app = FastAPI(title="Mini-RAG (Workspaces)")
 rag = WorkspaceRAG(WorkspaceRAGConfig())
+INDEX_JOBS: Dict[str, Dict[str, Any]] = {}
 
 
 # ── Pydantic models ─────────────────────────────────────────────────
@@ -44,6 +45,9 @@ class BuildIndexResponse(BaseModel):
     workspace_id: str
     num_docs: int
     num_chunks: int
+
+class BuildIndexRequest(BaseModel):
+    incremental: bool = True
 
 class UploadDirRequest(BaseModel):
     directory: str = Field(..., min_length=1)
@@ -232,6 +236,7 @@ def upload_directory(
 @app.post("/build_index/{workspace_id}", response_model=BuildIndexResponse)
 def build_index_for_workspace(
     workspace_id: str,
+    req: BuildIndexRequest = BuildIndexRequest(),
     user: Dict[str, Any] = Depends(require_user),
 ):
     require_workspace_access(workspace_id, user["id"])
@@ -249,12 +254,13 @@ def build_index_for_workspace(
         stats = build_index(
             raw_dir=str(paths.raw_dir),
             artifacts_dir=str(paths.artifacts_dir),
-            embed_model="intfloat/multilingual-e5-small",
-            use_e5_prefix=True,
+            embed_model=rag.cfg.embed_model,
+            use_e5_prefix=rag.cfg.use_e5_prefix,
             batch_size=64,
             device=None,
             max_tokens=550,
             overlap_tokens=80,
+            incremental=req.incremental,
         )
     except RuntimeError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -264,6 +270,61 @@ def build_index_for_workspace(
     get_db().touch_workspace(workspace_id)
 
     return {"workspace_id": workspace_id, "num_docs": stats["num_docs"], "num_chunks": stats["num_chunks"]}
+
+
+def _run_build_index_job(workspace_id: str, raw_dir: str, artifacts_dir: str, incremental: bool) -> None:
+    INDEX_JOBS[workspace_id] = {"status": "running"}
+    try:
+        stats = build_index(
+            raw_dir=raw_dir,
+            artifacts_dir=artifacts_dir,
+            embed_model=rag.cfg.embed_model,
+            use_e5_prefix=rag.cfg.use_e5_prefix,
+            batch_size=64,
+            device=None,
+            max_tokens=550,
+            overlap_tokens=80,
+            incremental=incremental,
+        )
+        rag.invalidate_cache(artifacts_dir)
+        INDEX_JOBS[workspace_id] = {"status": "done", "stats": stats}
+    except Exception as e:
+        INDEX_JOBS[workspace_id] = {"status": "failed", "error": str(e)}
+
+
+@app.post("/build_index_async/{workspace_id}")
+def build_index_for_workspace_async(
+    workspace_id: str,
+    background_tasks: BackgroundTasks,
+    req: BuildIndexRequest = BuildIndexRequest(),
+    user: Dict[str, Any] = Depends(require_user),
+):
+    require_workspace_access(workspace_id, user["id"])
+    try:
+        paths = get_paths(workspace_id)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    raw_files = [p for p in paths.raw_dir.iterdir() if p.is_file()] if paths.raw_dir.exists() else []
+    if not raw_files:
+        raise HTTPException(status_code=400, detail="No uploaded files found. Call /upload/{workspace_id} first.")
+    INDEX_JOBS[workspace_id] = {"status": "queued"}
+    background_tasks.add_task(
+        _run_build_index_job,
+        workspace_id,
+        str(paths.raw_dir),
+        str(paths.artifacts_dir),
+        req.incremental,
+    )
+    return {"workspace_id": workspace_id, "status": "queued"}
+
+
+@app.get("/index_jobs/{workspace_id}")
+def index_job_status(
+    workspace_id: str,
+    user: Dict[str, Any] = Depends(require_user),
+):
+    require_workspace_access(workspace_id, user["id"])
+    return INDEX_JOBS.get(workspace_id, {"status": "not_found"})
 
 
 # ── Conversations (auth required) ──────────────────────────────────

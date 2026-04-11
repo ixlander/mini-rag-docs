@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import List, Optional, Tuple
 
@@ -15,6 +16,8 @@ from pypdf import PdfReader
 class Section:
     title: str
     text: str
+    level: int = 1
+    path: str = ""
 
 
 @dataclass(frozen=True)
@@ -25,10 +28,15 @@ class Document:
     title: str
     sections: List[Section]
     url: Optional[str] = None
+    doc_type: str = "unknown"
+    ingested_at: str = ""
 
 
 _WHITESPACE_RE = re.compile(r"[ \t]+")
 _BLANK_LINES_RE = re.compile(r"\n{3,}")
+_EMAIL_RE = re.compile(r"\b[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}\b")
+_PHONE_RE = re.compile(r"(?<!\d)(?:\+?\d[\d\-\s().]{7,}\d)(?!\d)")
+_CARD_RE = re.compile(r"(?<!\d)(?:\d[ -]?){13,19}(?!\d)")
 
 
 def _normalize_text(s: str) -> str:
@@ -37,6 +45,13 @@ def _normalize_text(s: str) -> str:
     s = re.sub(r"[ \t]+\n", "\n", s)
     s = _BLANK_LINES_RE.sub("\n\n", s)
     return s.strip()
+
+
+def _redact_pii(s: str) -> str:
+    s = _EMAIL_RE.sub("[REDACTED_EMAIL]", s)
+    s = _PHONE_RE.sub("[REDACTED_PHONE]", s)
+    s = _CARD_RE.sub("[REDACTED_CARD]", s)
+    return s
 
 
 def _make_doc_id(path: Path, root_dir: Path) -> str:
@@ -77,18 +92,24 @@ def parse_markdown(md: str) -> Tuple[str, List[Section]]:
             headings.append((level, title, i))
 
     if not headings:
-        text = _normalize_text(md)
+        text = _redact_pii(_normalize_text(md))
         title = "Untitled"
-        return title, [Section(title="Main", text=text)] if text else [Section(title="Main", text="")]
+        return title, [Section(title="Main", text=text, path="Main")] if text else [Section(title="Main", text="", path="Main")]
 
     doc_title = next((t for lvl, t, _ in headings if lvl == 1), headings[0][1]) or "Untitled"
 
     sections: List[Section] = []
+    stack: List[str] = []
     for idx, (lvl, title, start_i) in enumerate(headings):
         end_i = headings[idx + 1][2] if idx + 1 < len(headings) else len(lines)
         block = "\n".join(lines[start_i + 1 : end_i])
-        block = _normalize_text(block)
-        sections.append(Section(title=title or "Untitled Section", text=block))
+        block = _redact_pii(_normalize_text(block))
+        heading = title or "Untitled Section"
+        while len(stack) >= lvl:
+            stack.pop()
+        stack.append(heading)
+        path_title = " > ".join(stack)
+        sections.append(Section(title=heading, text=block, level=lvl, path=path_title))
 
     return doc_title, sections
 
@@ -100,7 +121,7 @@ def extract_text_from_docx(path: Path) -> str:
         t = (p.text or "").strip()
         if t:
             parts.append(t)
-    return _normalize_text("\n".join(parts))
+    return _redact_pii(_normalize_text("\n".join(parts)))
 
 
 def extract_text_from_pdf(path: Path) -> str:
@@ -111,7 +132,7 @@ def extract_text_from_pdf(path: Path) -> str:
         t = t.strip()
         if t:
             parts.append(t)
-    return _normalize_text("\n\n".join(parts))
+    return _redact_pii(_normalize_text("\n\n".join(parts)))
 
 
 def parse_html(html: str) -> Tuple[str, List[Section]]:
@@ -132,7 +153,7 @@ def parse_html(html: str) -> Tuple[str, List[Section]]:
         nonlocal buf
         text = _normalize_text("\n".join(buf))
         if text:
-            sections.append(Section(title=current_title, text=text))
+            sections.append(Section(title=current_title, text=_redact_pii(text), level=2, path=current_title))
         buf = []
 
     for el in soup.find_all(["h1", "h2", "h3", "h4", "h5", "h6", "p", "li"]):
@@ -149,8 +170,8 @@ def parse_html(html: str) -> Tuple[str, List[Section]]:
     flush()
 
     if not sections:
-        text = _normalize_text(soup.get_text(" ", strip=True))
-        return doc_title, [Section(title="Main", text=text)] if text else [Section(title="Main", text="")]
+        text = _redact_pii(_normalize_text(soup.get_text(" ", strip=True)))
+        return doc_title, [Section(title="Main", text=text, path="Main")] if text else [Section(title="Main", text="", path="Main")]
 
     if not doc_title or doc_title == "Untitled":
         doc_title = sections[0].title or doc_title
@@ -171,19 +192,19 @@ def parse_file(path: Path, root_dir: Path) -> Document:
 
     elif ext == ".txt":
         raw = _read_text_file(path)
-        text = _normalize_text(raw)
+        text = _redact_pii(_normalize_text(raw))
         title = path.stem
-        sections = [Section(title="Main", text=text)]
+        sections = [Section(title="Main", text=text, path="Main")]
 
     elif ext == ".docx":
         text = extract_text_from_docx(path)
         title = path.stem
-        sections = [Section(title="Main", text=text)]
+        sections = [Section(title="Main", text=text, path="Main")]
 
     elif ext == ".pdf":
         text = extract_text_from_pdf(path)
         title = path.stem
-        sections = [Section(title="Main", text=text)]
+        sections = [Section(title="Main", text=text, path="Main")]
 
     else:
         raise ValueError(f"Unsupported file type: {path}")
@@ -198,6 +219,8 @@ def parse_file(path: Path, root_dir: Path) -> Document:
         title=title or path.stem,
         sections=sections,
         url=None,
+        doc_type=ext.lstrip("."),
+        ingested_at=datetime.now(timezone.utc).isoformat(),
     )
 
 def iter_docs(raw_root: str = "data/raw") -> List[Document]:
@@ -213,4 +236,3 @@ def iter_docs(raw_root: str = "data/raw") -> List[Document]:
             continue
         docs.append(parse_file(path, root))
     return docs
-

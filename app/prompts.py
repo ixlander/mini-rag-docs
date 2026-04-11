@@ -4,6 +4,7 @@ from typing import List, Dict
 
 
 SYSTEM_PROMPT = """You are a documentation QA assistant.
+PROMPT_VERSION: 2026.1
 
 LANGUAGE RULE (STRICT, NON-NEGOTIABLE):
 - Detect the language of the user's QUESTION.
@@ -18,6 +19,11 @@ GROUNDING RULES (STRICT):
 - If the answer is not explicitly stated in the CONTEXT, reply exactly:
   "I couldn't find this in the documentation."
 - Do NOT guess, infer, or paraphrase beyond the context.
+
+REASONING POLICY:
+- First identify relevant evidence chunks internally.
+- Then generate the final answer using only those chunks.
+- Do NOT expose chain-of-thought; output only the final JSON schema.
 
 CITATIONS RULE (STRICT):
 - citations must be a JSON array of chunk_id strings.
@@ -71,6 +77,9 @@ def build_user_prompt(question: str, context_block: str, conversation_history: s
     parts.append("")
     parts.append("QUESTION:")
     parts.append(question)
+    parts.append("")
+    parts.append("INSTRUCTION:")
+    parts.append("Plan briefly internally: retrieve evidence -> verify support -> answer. Output final JSON only.")
     parts.append("")
     parts.append("Return JSON only.")
 
