@@ -14,16 +14,39 @@ from sentence_transformers import SentenceTransformer
 
 logger = logging.getLogger(__name__)
 
-_embedder: SentenceTransformer | None = None
+_embedder: Any | None = None
 
 
-def _get_embedder() -> SentenceTransformer:
+class _FallbackEmbedder:
+    """Offline-safe lightweight embedder for evaluation fallback."""
+
+    def __init__(self, dim: int = 256) -> None:
+        self.dim = dim
+
+    def encode(self, texts: List[str], convert_to_numpy: bool = True) -> np.ndarray:
+        vecs: List[np.ndarray] = []
+        for text in texts:
+            v = np.zeros(self.dim, dtype=np.float32)
+            toks = [t for t in "".join(ch.lower() if ch.isalnum() else " " for ch in text).split() if t]
+            for tok in toks:
+                idx = hash(tok) % self.dim
+                v[idx] += 1.0
+            norm = np.linalg.norm(v) + 1e-12
+            vecs.append(v / norm)
+        return np.vstack(vecs)
+
+
+def _get_embedder() -> Any:
     global _embedder
     if _embedder is None:
         model_name = os.getenv("EMBED_MODEL", "intfloat/multilingual-e5-small")
         device = "cuda" if torch.cuda.is_available() else "cpu"
         logger.info("Evaluation: loading embedder %s on %s", model_name, device)
-        _embedder = SentenceTransformer(model_name, device=device)
+        try:
+            _embedder = SentenceTransformer(model_name, device=device)
+        except Exception as e:
+            logger.warning("Evaluation embedder unavailable (%s), falling back to local hashing embedder", e)
+            _embedder = _FallbackEmbedder()
     return _embedder
 
 
@@ -57,10 +80,23 @@ class JudgeMetrics:
 
 
 @dataclass
+class RetrievalMetrics:
+    recall_at_k: float
+    ndcg_at_k: float
+    mrr: float
+    citation_precision: float
+    hallucination_rate: float
+    abstention_quality: float
+    avg_latency_ms: float
+    num_samples: int
+
+
+@dataclass
 class EvaluationResults:
     answer: AnswerMetrics
     detailed_results: List[Dict[str, Any]]
     judge: Optional[JudgeMetrics] = None
+    retrieval: Optional[RetrievalMetrics] = None
 
 
 JUDGE_SYSTEM_PROMPT = (
@@ -207,6 +243,7 @@ def evaluate_rag_system(
     judge: Optional[LLMJudge] = None
 ) -> EvaluationResults:
     answer_metrics_list = []
+    retrieval_metrics_list = []
     detailed_results = []
 
     for idx, item in enumerate(evaluation_items):
@@ -219,6 +256,7 @@ def evaluate_rag_system(
             answer = response.get('answer', '')
             citations = response.get('citations', [])
             retrieved_chunks = response.get('retrieved_chunks', [])
+            latency_ms = float(response.get("latency_ms", 0.0) or 0.0)
 
             retrieved_chunk_ids = [c.get('chunk_id') for c in retrieved_chunks if 'chunk_id' in c]
             retrieved_texts = [c.get('text', '') for c in retrieved_chunks]
@@ -230,6 +268,58 @@ def evaluate_rag_system(
                 ground_truth=item.ground_truth_answer
             )
             answer_metrics_list.append(answer_result)
+
+            metadata = item.metadata or {}
+            expected_chunk_ids = metadata.get("expected_chunk_ids", []) if isinstance(metadata, dict) else []
+            expected_set = {c for c in expected_chunk_ids if isinstance(c, str)}
+            retrieved_set = {c for c in retrieved_chunk_ids if isinstance(c, str)}
+            cited_set = {c for c in citations if isinstance(c, str)}
+
+            if expected_set:
+                rr = 0.0
+                for rank, cid in enumerate(retrieved_chunk_ids, start=1):
+                    if cid in expected_set:
+                        rr = 1.0 / rank
+                        break
+                hits = [1 if cid in expected_set else 0 for cid in retrieved_chunk_ids[:k]]
+                recall_at_k = 1.0 if any(hits) else 0.0
+                dcg = sum((rel / np.log2(i + 2)) for i, rel in enumerate(hits))
+                ideal_hits = [1] * min(len(expected_set), k)
+                idcg = sum((rel / np.log2(i + 2)) for i, rel in enumerate(ideal_hits)) or 1.0
+                ndcg_at_k = float(dcg / idcg)
+            else:
+                rr = 0.0
+                recall_at_k = 1.0 if retrieved_chunk_ids else 0.0
+                ndcg_at_k = 1.0 if retrieved_chunk_ids else 0.0
+
+            if cited_set:
+                if expected_set:
+                    citation_precision = len(cited_set & expected_set) / max(1, len(cited_set))
+                else:
+                    citation_precision = len(cited_set & retrieved_set) / max(1, len(cited_set))
+            else:
+                citation_precision = 0.0
+
+            abstained = "couldn't find this in the documentation" in answer.lower()
+            if abstained:
+                if not expected_set:
+                    abstention_quality = 1.0
+                else:
+                    found_expected = any(cid in expected_set for cid in retrieved_chunk_ids)
+                    abstention_quality = 0.0 if found_expected else 1.0
+            else:
+                abstention_quality = 1.0
+
+            hallucination_rate = 1.0 if (answer and not citations and not abstained) else 0.0
+            retrieval_metrics_list.append({
+                "recall_at_k": float(recall_at_k),
+                "ndcg_at_k": float(ndcg_at_k),
+                "mrr": float(rr),
+                "citation_precision": float(citation_precision),
+                "hallucination_rate": float(hallucination_rate),
+                "abstention_quality": float(abstention_quality),
+                "latency_ms": float(latency_ms),
+            })
 
             judge_result = None
             if judge is not None:
@@ -248,7 +338,8 @@ def evaluate_rag_system(
                 'citations': citations,
                 'answer_metrics': answer_result,
                 'judge_metrics': judge_result,
-                'metadata': item.metadata
+                'metadata': item.metadata,
+                'latency_ms': latency_ms,
             })
 
         except Exception as e:
@@ -279,10 +370,24 @@ def evaluate_rag_system(
                 num_samples=len(judge_results)
             )
 
+    avg_retrieval = None
+    if retrieval_metrics_list:
+        avg_retrieval = RetrievalMetrics(
+            recall_at_k=float(np.mean([m["recall_at_k"] for m in retrieval_metrics_list])),
+            ndcg_at_k=float(np.mean([m["ndcg_at_k"] for m in retrieval_metrics_list])),
+            mrr=float(np.mean([m["mrr"] for m in retrieval_metrics_list])),
+            citation_precision=float(np.mean([m["citation_precision"] for m in retrieval_metrics_list])),
+            hallucination_rate=float(np.mean([m["hallucination_rate"] for m in retrieval_metrics_list])),
+            abstention_quality=float(np.mean([m["abstention_quality"] for m in retrieval_metrics_list])),
+            avg_latency_ms=float(np.mean([m["latency_ms"] for m in retrieval_metrics_list])),
+            num_samples=len(retrieval_metrics_list),
+        )
+
     return EvaluationResults(
         answer=avg_answer,
         detailed_results=detailed_results,
-        judge=avg_judge
+        judge=avg_judge,
+        retrieval=avg_retrieval,
     )
 
 
@@ -302,6 +407,18 @@ def save_evaluation_results(results: EvaluationResults, output_path: str) -> Non
             'relevance': float(results.judge.relevance),
             'completeness': float(results.judge.completeness),
             'num_samples': results.judge.num_samples
+        }
+
+    if results.retrieval is not None:
+        output['retrieval_metrics'] = {
+            'recall_at_k': float(results.retrieval.recall_at_k),
+            'ndcg_at_k': float(results.retrieval.ndcg_at_k),
+            'mrr': float(results.retrieval.mrr),
+            'citation_precision': float(results.retrieval.citation_precision),
+            'hallucination_rate': float(results.retrieval.hallucination_rate),
+            'abstention_quality': float(results.retrieval.abstention_quality),
+            'avg_latency_ms': float(results.retrieval.avg_latency_ms),
+            'num_samples': results.retrieval.num_samples,
         }
 
     Path(output_path).write_text(

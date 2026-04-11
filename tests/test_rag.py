@@ -39,3 +39,21 @@ class TestWorkspaceRAGConfig:
         cfg = WorkspaceRAGConfig(top_k=20, temperature=0.5)
         assert cfg.top_k == 20
         assert cfg.temperature == 0.5
+
+
+class TestRagHelpers:
+    def test_redact_pii(self):
+        text = "Contact me at user@example.com or +1 (555) 123-4567"
+        redacted = WorkspaceRAG._redact_pii(text)
+        assert "[REDACTED_EMAIL]" in redacted
+        assert "[REDACTED_PHONE]" in redacted
+
+    def test_provenance_hash_shape(self):
+        h = WorkspaceRAG._provenance_hash({
+            "chunk_id": "a::chunk0001",
+            "doc_id": "a.md",
+            "title": "A",
+            "text": "hello world",
+        })
+        assert isinstance(h, str)
+        assert len(h) == 16

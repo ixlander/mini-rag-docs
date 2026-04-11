@@ -161,6 +161,16 @@ def main():
         logger.info(f"  Completeness: {results.judge.completeness:.2f}")
         logger.info(f"  Samples: {results.judge.num_samples}")
 
+    if results.retrieval is not None:
+        logger.info("\nRetrieval / Citation Metrics:")
+        logger.info(f"  Recall@{args.k}: {results.retrieval.recall_at_k:.4f}")
+        logger.info(f"  nDCG@{args.k}: {results.retrieval.ndcg_at_k:.4f}")
+        logger.info(f"  MRR: {results.retrieval.mrr:.4f}")
+        logger.info(f"  Citation Precision: {results.retrieval.citation_precision:.4f}")
+        logger.info(f"  Hallucination Rate: {results.retrieval.hallucination_rate:.4f}")
+        logger.info(f"  Abstention Quality: {results.retrieval.abstention_quality:.4f}")
+        logger.info(f"  Avg Latency (ms): {results.retrieval.avg_latency_ms:.2f}")
+
     logger.info("="*60 + "\n")
     
     logger.info(f"Saving detailed results to {args.output}")

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
+from datetime import datetime, timezone
 from typing import Dict, List, Optional, Tuple
 
 from ingest.parsers import Document, Section
@@ -15,6 +16,10 @@ class Chunk:
     section: str
     text: str
     url: Optional[str] = None
+    doc_type: str = "unknown"
+    section_path: str = "Main"
+    source_quality: float = 1.0
+    ingested_at: str = ""
 
 def estimate_tokens(text: str) -> int:
     text = text.strip()
@@ -24,12 +29,69 @@ def estimate_tokens(text: str) -> int:
 
 
 _SENT_SPLIT_RE = re.compile(r"(?<=[.!?])\s+")
+_LIST_ITEM_RE = re.compile(r"^\s*(?:[-*+]\s+|\d+\.\s+)")
+_TABLE_ROW_RE = re.compile(r"^\s*\|.*\|\s*$")
+_HEADING_RE = re.compile(r"^\s{0,3}#{1,6}\s+")
+MIN_SECTIONS_FOR_QUALITY_BONUS = 3
+MIN_AVG_LEN_FOR_QUALITY_BONUS = 250
 
 
 def split_into_paragraphs(text: str) -> List[str]:
     text = text.strip().replace("\r\n", "\n").replace("\r", "\n")
-    parts = [p.strip() for p in re.split(r"\n\s*\n", text) if p.strip()]
+    raw_blocks = [p.strip() for p in re.split(r"\n\s*\n", text) if p.strip()]
+    parts: List[str] = []
+
+    for block in raw_blocks:
+        lines = [ln.rstrip() for ln in block.split("\n") if ln.strip()]
+        if not lines:
+            continue
+
+        if "```" in block:
+            parts.append(block)
+            continue
+
+        if all(_TABLE_ROW_RE.match(ln) for ln in lines):
+            parts.append("\n".join(lines))
+            continue
+
+        grouped: List[str] = []
+        buf: List[str] = []
+        for ln in lines:
+            if _HEADING_RE.match(ln):
+                if buf:
+                    grouped.append(" ".join(buf).strip())
+                    buf = []
+                grouped.append(ln.strip())
+                continue
+            if _LIST_ITEM_RE.match(ln):
+                if buf:
+                    grouped.append(" ".join(buf).strip())
+                    buf = []
+                grouped.append(ln.strip())
+                continue
+            buf.append(ln.strip())
+        if buf:
+            grouped.append(" ".join(buf).strip())
+
+        parts.extend([p for p in grouped if p])
+
     return parts
+
+
+def _estimate_source_quality(doc: Document) -> float:
+    non_empty = sum(1 for s in doc.sections if (s.text or "").strip())
+    if non_empty == 0:
+        return 0.0
+    total_chars = sum(len((s.text or "").strip()) for s in doc.sections)
+    avg_len = total_chars / non_empty
+    score = 0.4
+    if non_empty >= MIN_SECTIONS_FOR_QUALITY_BONUS:
+        score += 0.3
+    if avg_len >= MIN_AVG_LEN_FOR_QUALITY_BONUS:
+        score += 0.2
+    if doc.doc_type in {"md", "html", "htm"}:
+        score += 0.1
+    return min(1.0, max(0.0, score))
 
 
 def take_overlap_tail(prev_text: str, overlap_tokens: int) -> str:
@@ -106,9 +168,12 @@ def chunk_document(
 ) -> List[Chunk]:
     out: List[Chunk] = []
     counter = 0
+    source_quality = _estimate_source_quality(doc)
+    ingested_at = doc.ingested_at or datetime.now(timezone.utc).isoformat()
 
     for sec in doc.sections:
         section_title = sec.title.strip() or "Main"
+        section_path = (getattr(sec, "path", "") or section_title).strip()
         text = (sec.text or "").strip()
         if not text:
             continue
@@ -128,6 +193,10 @@ def chunk_document(
                     section=section_title,
                     text=t.strip(),
                     url=doc.url,
+                    doc_type=doc.doc_type or "unknown",
+                    section_path=section_path,
+                    source_quality=source_quality,
+                    ingested_at=ingested_at,
                 )
             )
 
