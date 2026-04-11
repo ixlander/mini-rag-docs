@@ -292,7 +292,7 @@ We tested this RAG system on a dataset of 24 questions based on publicly availab
 
 **Source documents:** [Google Drive](https://drive.google.com/drive/folders/1QWn1dX7XO0H_Co7U0GItJQC73-GlGzwd?usp=drive_link)
 
-**Evaluation dataset:** `examples/evaluation_dataset_bcc.json` (24 questions across 7 categories: financial, climate strategy, ESG policy, information security, governance, social, and reporting)
+**Evaluation dataset:** `examples/evaluation_dataset_bcc.json` (24 questions across 7 categories: financial, climate strategy, ESG policy, information security, governance, social and reporting)
 
 **Results (24 samples):**
 
