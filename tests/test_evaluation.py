@@ -9,10 +9,12 @@ import pytest
 from app.evaluation import (
     EvaluationItem,
     JudgeMetrics,
+    RetrievalMetrics,
     LLMJudge,
     calculate_faithfulness,
     calculate_answer_relevance,
     evaluate_answer,
+    evaluate_rag_system,
     load_evaluation_dataset,
     save_evaluation_results,
     EvaluationResults,
@@ -233,3 +235,55 @@ class TestJudgeMetrics:
         assert judge.model == "test-model"
         assert judge.timeout == 60
         assert "example.com" in judge.url
+
+
+class TestRetrievalMetrics:
+    def test_save_results_with_retrieval_metrics(self):
+        results = EvaluationResults(
+            answer=AnswerMetrics(0.75, 0.80, 10),
+            detailed_results=[],
+            retrieval=RetrievalMetrics(
+                recall_at_k=0.6,
+                ndcg_at_k=0.7,
+                mrr=0.5,
+                citation_precision=0.8,
+                hallucination_rate=0.1,
+                abstention_quality=0.9,
+                avg_latency_ms=120.0,
+                num_samples=10,
+            ),
+        )
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
+            filepath = f.name
+        try:
+            save_evaluation_results(results, filepath)
+            with open(filepath, 'r') as f:
+                loaded = json.load(f)
+            assert 'retrieval_metrics' in loaded
+            assert loaded['retrieval_metrics']['mrr'] == 0.5
+            assert loaded['retrieval_metrics']['citation_precision'] == 0.8
+        finally:
+            Path(filepath).unlink()
+
+    def test_evaluate_rag_system_computes_retrieval_metrics(self):
+        items = [
+            EvaluationItem(
+                question="What is X?",
+                ground_truth_answer="X is Y",
+                workspace_id="ws1",
+                metadata={"expected_chunk_ids": ["c1"]},
+            )
+        ]
+
+        def fake_rag(_workspace_id, _question):
+            return {
+                "answer": "X is Y",
+                "citations": ["c1"],
+                "retrieved_chunks": [{"chunk_id": "c1", "text": "X is Y"}],
+                "latency_ms": 50,
+            }
+
+        out = evaluate_rag_system(items, fake_rag, k=5, verbose=False, judge=None)
+        assert out.retrieval is not None
+        assert out.retrieval.recall_at_k == 1.0
+        assert out.retrieval.mrr == 1.0

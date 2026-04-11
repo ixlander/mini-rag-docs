@@ -24,7 +24,7 @@ A local-first RAG system that indexes documents per workspace and answers questi
                                                                  ▼
                        ┌─────────┐    ┌──────────┐    ┌─────────────┐    ┌─────────┐
                        │  Embed  │ -> │ Retrieve │ -> │   Rerank    │ -> │   LLM   │
-                       │  (E5)   │    │  (FAISS) │    │ Cross-Enc.  │    │ (Ollama)│
+                       │  (E5)   │    │BM25+FAISS│    │ Cross-Enc.  │    │ (Ollama)│
                        └─────────┘    └──────────┘    └─────────────┘    └─────────┘
                                                                  │
                                                                  ▼
@@ -41,9 +41,10 @@ A local-first RAG system that indexes documents per workspace and answers questi
 - **Persistent SQLite database** — tracks users, workspaces, documents, and conversations
 - **Conversation memory** — multi-turn Q&A with context carried across messages
 - **5 file formats** — Markdown, HTML, TXT, PDF, DOCX
-- **Two-stage retrieval** — FAISS vector search → cross-encoder reranking for precision
+- **Hybrid retrieval** — BM25 lexical + FAISS dense search → cross-encoder reranking
 - **Multilingual** — E5-small embeddings with automatic language detection in prompts
-- **Structured output** — JSON responses with answer, citations, and confidence level
+- **Structured output** — JSON responses with answer, citations, confidence, and provenance hashes
+- **Incremental indexing** — re-index only changed documents (embedding/chunk reuse)
 - **Evaluation metrics** — built-in support for measuring retrieval and answer quality
 - **Configurable via environment** — all key settings (models, URLs) via env vars
 - **Docker-ready** — single command deployment with docker-compose
@@ -227,6 +228,8 @@ python -m pytest tests/ -v
 - `POST /upload/{workspace_id}` - upload files (md, txt, html, pdf, docx) (auth required)
 - `POST /upload_dir/{workspace_id}` - upload all supported files from a local directory (auth required)
 - `POST /build_index/{workspace_id}` - build the FAISS index (auth required)
+- `POST /build_index_async/{workspace_id}` - queue background index build (auth required)
+- `GET /index_jobs/{workspace_id}` - check background index job status (auth required)
 - `POST /conversations` - create a conversation in a workspace (auth required)
 - `GET /conversations/{workspace_id}` - list conversations (auth required)
 - `GET /conversations/{workspace_id}/{conversation_id}/messages` - get conversation messages (auth required)

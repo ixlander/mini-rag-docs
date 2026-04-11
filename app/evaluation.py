@@ -14,16 +14,39 @@ from sentence_transformers import SentenceTransformer
 
 logger = logging.getLogger(__name__)
 
-_embedder: SentenceTransformer | None = None
+_embedder: Any | None = None
 
 
-def _get_embedder() -> SentenceTransformer:
+class _FallbackEmbedder:
+    """Offline-safe lightweight embedder for evaluation fallback."""
+
+    def __init__(self, dim: int = 256) -> None:
+        self.dim = dim
+
+    def encode(self, texts: List[str], convert_to_numpy: bool = True) -> np.ndarray:
+        vecs: List[np.ndarray] = []
+        for text in texts:
+            v = np.zeros(self.dim, dtype=np.float32)
+            toks = [t for t in "".join(ch.lower() if ch.isalnum() else " " for ch in text).split() if t]
+            for tok in toks:
+                idx = hash(tok) % self.dim
+                v[idx] += 1.0
+            norm = np.linalg.norm(v) + 1e-12
+            vecs.append(v / norm)
+        return np.vstack(vecs)
+
+
+def _get_embedder() -> Any:
     global _embedder
     if _embedder is None:
         model_name = os.getenv("EMBED_MODEL", "intfloat/multilingual-e5-small")
         device = "cuda" if torch.cuda.is_available() else "cpu"
         logger.info("Evaluation: loading embedder %s on %s", model_name, device)
-        _embedder = SentenceTransformer(model_name, device=device)
+        try:
+            _embedder = SentenceTransformer(model_name, device=device)
+        except Exception as e:
+            logger.warning("Evaluation embedder unavailable (%s), falling back to local hashing embedder", e)
+            _embedder = _FallbackEmbedder()
     return _embedder
 
 
